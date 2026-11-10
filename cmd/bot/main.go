@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -25,12 +27,18 @@ type BotConfig struct {
 	MaxDemoMB  int64    `json:"maxDemoMB"`
 }
 
+// analysisMu serializes demo analyses; queued counts demos waiting or running.
+var (
+	analysisMu sync.Mutex
+	queued     atomic.Int32
+)
+
 func loadConfig(path string) (*BotConfig, error) {
 	cfg := &BotConfig{
 		Token:      "PEGA_AQUI_TU_TOKEN_DE_DISCORD",
 		Prefix:     "!sourcesight",
 		ChannelIDs: []string{},
-		MaxDemoMB:  150,
+		MaxDemoMB:  250,
 	}
 
 	data, err := os.ReadFile(path)
@@ -123,12 +131,29 @@ func main() {
 		}
 
 		sizeMB := float64(demAtt.Size) / (1024.0 * 1024.0)
-		if cfg.MaxDemoMB > 0 && int64(sizeMB) > cfg.MaxDemoMB {
+		if cfg.MaxDemoMB > 0 && sizeMB > float64(cfg.MaxDemoMB) {
 			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("La demo pesa %.1f MB y el límite es %d MB.", sizeMB, cfg.MaxDemoMB))
 			return
 		}
 
-		statusMsg, _ := s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Analizando `%s` (%.1f MB)...", demAtt.Filename, sizeMB))
+		// One analysis at a time: parsing is CPU-heavy and the analyzer keeps
+		// per-run state that must not be shared between concurrent demos.
+		ahead := queued.Add(1) - 1
+		defer queued.Add(-1)
+		status := fmt.Sprintf("Analizando `%s` (%.1f MB)...", demAtt.Filename, sizeMB)
+		if ahead > 0 {
+			status = fmt.Sprintf("`%s` en cola: hay %d demo(s) antes.", demAtt.Filename, ahead)
+		}
+		statusMsg, err := s.ChannelMessageSend(m.ChannelID, status)
+		if err != nil {
+			fmt.Printf("[-] No se pudo responder en el canal: %v\n", err)
+			return
+		}
+		analysisMu.Lock()
+		defer analysisMu.Unlock()
+		if ahead > 0 {
+			_, _ = s.ChannelMessageEdit(m.ChannelID, statusMsg.ID, fmt.Sprintf("Analizando `%s` (%.1f MB)...", demAtt.Filename, sizeMB))
+		}
 
 		// Download demo
 		resp, err := http.Get(demAtt.URL)
