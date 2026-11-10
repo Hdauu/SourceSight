@@ -450,7 +450,7 @@ func LaunchApp(initialDemoPath string) error {
 	})
 
 	_ = w.Bind("selectDemoFile", func() error {
-		paths, err := OpenDemoDialog()
+		paths, err := OpenDemoDialog(uintptr(w.Window()))
 		if err != nil || len(paths) == 0 {
 			a.call("restoreIdle")
 			return nil
@@ -643,11 +643,26 @@ func LaunchApp(initialDemoPath string) error {
 		return string(b), err
 	})
 
-	_ = w.Bind("saveConfig", func(path string, preroll float64) error {
+	// saveConfig returns the game folder actually stored (csgo.exe paths become the
+	// "csgo" folder demos are copied into), or an error if it isn't a CS:GO install.
+	_ = w.Bind("saveConfig", func(path string, preroll float64) (string, error) {
 		cfg := launcher.LoadConfig() // keep fields this dialog doesn't edit
-		cfg.CSGOPath = launcher.CleanCSGODir(path)
+		cfg.CSGOPath = ""
+		if p := strings.Trim(strings.TrimSpace(path), `"`); p != "" {
+			dir := launcher.CleanCSGODir(p)
+			if st, err := os.Stat(dir); err != nil || !st.IsDir() {
+				return "", fmt.Errorf("la carpeta %s no existe", dir)
+			}
+			if _, err := os.Stat(filepath.Join(filepath.Dir(dir), "csgo.exe")); err != nil {
+				if _, err := os.Stat(filepath.Join(dir, "csgo.exe")); err != nil {
+					return "", fmt.Errorf("no encontré csgo.exe en %s; elegí csgo.exe con el botón Buscar", filepath.Dir(dir))
+				}
+			}
+			cfg.CSGOPath = dir
+		}
 		cfg.PrerollSeconds = preroll
-		return launcher.SaveConfig(cfg)
+		applog.Printf("config: carpeta de CS:GO %q", cfg.CSGOPath)
+		return cfg.CSGOPath, launcher.SaveConfig(cfg)
 	})
 
 	_ = w.Bind("saveSidebarWidth", func(width int) error {
@@ -657,7 +672,7 @@ func LaunchApp(initialDemoPath string) error {
 	})
 
 	_ = w.Bind("browseCSGOPath", func() (string, error) {
-		path, err := OpenCSGODialog()
+		path, err := OpenCSGODialog(uintptr(w.Window()))
 		if err != nil || path == "" {
 			return "", nil
 		}

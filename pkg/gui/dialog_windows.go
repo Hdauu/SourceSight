@@ -39,13 +39,14 @@ type openFileNameW struct {
 
 // OpenDemoDialog opens the native Windows file dialog to pick one or more .dem files.
 // It returns nil when the user cancels.
-func OpenDemoDialog() ([]string, error) {
+func OpenDemoDialog(owner uintptr) ([]string, error) {
 	fileBuf := make([]uint16, 64*1024)
 	filter, _ := syscall.UTF16PtrFromString("Demos de Counter-Strike (*.dem)\x00*.dem\x00Todos los archivos (*.*)\x00*.*\x00\x00")
 	title, _ := syscall.UTF16PtrFromString("SourceSight — Abrir demos")
 
 	var ofn openFileNameW
 	ofn.StructSize = uint32(unsafe.Sizeof(ofn))
+	ofn.Hwnd = owner // modal over the app window, so it never opens hidden behind it
 	ofn.Filter = filter
 	ofn.File = &fileBuf[0]
 	ofn.MaxFile = uint32(len(fileBuf))
@@ -86,13 +87,14 @@ func splitMultiSelect(buf []uint16) []string {
 }
 
 // OpenCSGODialog opens the native Windows File Explorer dialog to pick csgo.exe or game directory.
-func OpenCSGODialog() (string, error) {
+func OpenCSGODialog(owner uintptr) (string, error) {
 	fileBuf := make([]uint16, 2048)
 	filter, _ := syscall.UTF16PtrFromString("Ejecutable de CS:GO (csgo.exe)\x00csgo.exe\x00Todos los archivos (*.*)\x00*.*\x00\x00")
 	title, _ := syscall.UTF16PtrFromString("SourceSight — Seleccionar csgo.exe o carpeta del juego")
 
 	var ofn openFileNameW
 	ofn.StructSize = uint32(unsafe.Sizeof(ofn))
+	ofn.Hwnd = owner // modal over the app window, so it never opens hidden behind it
 	ofn.Filter = filter
 	ofn.File = &fileBuf[0]
 	ofn.MaxFile = uint32(len(fileBuf))

@@ -1983,8 +1983,12 @@ const AppHTML = `<!DOCTYPE html>
             const preroll = parseFloat(document.getElementById('cfgPreroll').value) || 2.5;
             if (!window.saveConfig) { closeSettings(); return; }
             window.saveConfig(p, preroll)
-                .then(() => { showToast('Configuración guardada'); closeSettings(); })
-                .catch(err => showToast('No se pudo guardar: ' + err));
+                .then(saved => {
+                    if (saved) document.getElementById('cfgCSGOPath').value = saved;
+                    showToast(saved ? 'Guardado. Carpeta del juego: ' + saved : 'Configuración guardada');
+                    closeSettings();
+                })
+                .catch(err => showToast('No se pudo guardar: ' + (err && err.message ? err.message : err)));
         }
 
         function openRepo() { if (appInfo.repoUrl) openLink(appInfo.repoUrl); }
