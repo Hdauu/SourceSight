@@ -9,6 +9,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"sourcesight/pkg/core"
+	"sourcesight/pkg/db"
 	"sourcesight/pkg/evidence"
 	"sourcesight/pkg/version"
 )
@@ -147,9 +148,16 @@ func playerEmbed(rep *core.DemoReport, p core.PlayerStats) *discordgo.MessageEmb
 	}
 
 	fields := []*discordgo.MessageEmbedField{
-		{Name: "Detecciones", Value: "`" + strings.Join(p.Flags, " + ") + "`"},
+		{Name: levelLabel(p.Level), Value: "`" + strings.Join(p.Flags, " + ") + "`"},
 		{Name: "Métricas", Value: metrics},
 		{Name: fmt.Sprintf("Incidentes (%d)", len(p.Incidents)), Value: incStr},
+	}
+	if c, ok := db.GetDatabase().Confirmations()[strconv.FormatUint(p.SteamID, 10)]; ok {
+		note := "Confirmado como cheater por el staff el " + c.Date
+		if c.Note != "" {
+			note += ": " + c.Note
+		}
+		fields = append([]*discordgo.MessageEmbedField{{Name: "Confirmado", Value: note}}, fields...)
 	}
 	if p.PreviousInfractions > 0 {
 		fields = append(fields, &discordgo.MessageEmbedField{
@@ -165,4 +173,16 @@ func playerEmbed(rep *core.DemoReport, p core.PlayerStats) *discordgo.MessageEmb
 		Fields: fields,
 		Footer: &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("SteamID64 %d · SourceSight %s", p.SteamID, version.Version)},
 	}
+}
+
+func levelLabel(level string) string {
+	switch level {
+	case core.LevelCheat:
+		return "Cheat detectado"
+	case core.LevelSuspect:
+		return "Sospechoso"
+	case core.LevelConduct:
+		return "Conducta"
+	}
+	return "Limpio"
 }

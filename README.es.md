@@ -35,6 +35,16 @@ Corre en Windows, todo local. No sube nada a ningún lado.
 
 Los resultados son **indicios, no pruebas**. Cada incidente trae su comando `demo_gototick` para que lo confirmes mirando la demo antes de sancionar.
 
+Cada jugador recibe un nivel:
+
+| Nivel | Qué significa |
+|---|---|
+| **Cheat detectado** | Superó un umbral fuerte: autobunny, triggerbot, aimlock/spinbot, silent aim, wallhack o macro |
+| **Sospechoso** | Indicios más débiles que conviene mirar: bhop alto, kills cegado o a través de humo |
+| **Conducta** | No es cheat pero le importa al staff: AFK, flashes al propio equipo |
+| **Limpio** | No se encontró nada |
+| **Confirmado** | Lo marca un admin después de ver la demo, nunca la app. Queda guardado por SteamID |
+
 ## Instalar
 
 1. Bajá **`SourceSight-Setup-vX.Y.Z.exe`** desde la [última versión](https://github.com/Hdauu/SourceSight/releases/latest).
@@ -50,8 +60,10 @@ Necesita el runtime de WebView2, que ya viene con Windows 10 y 11.
 ## Uso
 
 - Soltá una o varias demos (o una carpeta) sobre la ventana, o usá **Abrir demos**. El instalador también agrega *Abrir con → SourceSight* para los `.dem`.
-- Cada demo analizada queda en el **historial**; volver a abrirla es instantáneo.
-- Click en un jugador para ver sus métricas, los incidentes por ronda y su historial en todas las demos que analizaste.
+- Cada demo analizada queda en el **historial**; volver a abrirla es instantáneo. Se puede filtrar por nivel (cheat, sospechosas, limpias) o por categoría.
+- Si una demo es el mismo archivo o la misma partida que otra del historial (renombrada, copiada o grabada dos veces), la app pregunta si reemplazarla, guardar las dos o descartarla, para que ninguna partida cuente doble.
+- Click en un jugador para ver sus métricas e incidentes por ronda, y marcarlo como cheater confirmado después de revisar la demo.
+- La pestaña **Jugadores** promedia a cada jugador en todas tus demos y lo compara con el resto. Se busca por nombre, SteamID64, link de perfil, `STEAM_0:X:Y` o `[U:1:N]`.
 - **Exportar evidencia** genera un HTML imprimible con los incidentes y el SHA-256 de la demo, para pasarle a otro admin.
 - **Ver** abre CS:GO directo en el tick del incidente (configurá la carpeta del juego en Configuración).
 

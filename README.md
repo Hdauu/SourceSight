@@ -35,6 +35,16 @@ Runs on Windows, fully local. Nothing is uploaded anywhere.
 
 Results are **leads, not proof**. Each incident includes its `demo_gototick` command so you can confirm it by watching the demo before banning anyone.
 
+Every player gets a level:
+
+| Level | Meaning |
+|---|---|
+| **Cheat detected** | Crossed a strong threshold: autobunny, triggerbot, aimlock/spinbot, silent aim, wallhack or macro |
+| **Suspicious** | Weaker signs worth a look: high bhop, blind or through-smoke kills |
+| **Conduct** | Not cheating, but relevant to staff: AFK, team-flashing |
+| **Clean** | Nothing found |
+| **Confirmed** | Set by a staff member after watching the demo, never by the app. Saved per SteamID |
+
 ## Install
 
 1. Download **`SourceSight-Setup-vX.Y.Z.exe`** from the [latest release](https://github.com/Hdauu/SourceSight/releases/latest).
@@ -50,8 +60,10 @@ Requires the WebView2 runtime, which ships with Windows 10 and 11.
 ## Usage
 
 - Drop one or more demos (or a whole folder) onto the window, or use **Open demos**. The installer also adds *Open with → SourceSight* for `.dem` files.
-- Every analyzed demo stays in the **history**; reopening it is instant.
-- Click a player to see their metrics, incidents per round and their record across every demo you've analyzed.
+- Every analyzed demo stays in the **history**; reopening it is instant. Filter it by level (cheat, suspicious, clean) or by detection.
+- If a demo is the same file or the same match as one already in the history (renamed, copied or recorded twice), the app asks whether to replace it, keep both or discard it, so no match is counted twice.
+- Click a player to see their metrics and incidents per round, and mark them as a confirmed cheater after reviewing the demo.
+- The **Players** tab averages every player across all your demos and compares them with everyone else. Search by name, SteamID64, profile link, `STEAM_0:X:Y` or `[U:1:N]`.
 - **Export evidence** creates a printable HTML file with the incidents and the demo's SHA-256, to hand to another admin.
 - **Watch** opens CS:GO at the incident's tick (set the game folder in Settings).
 

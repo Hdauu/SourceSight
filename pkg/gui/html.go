@@ -155,7 +155,6 @@ const AppHTML = `<!DOCTYPE html>
             justify-content: space-between;
         }
         .aside-title { font-size: 12.5px; font-weight: 600; }
-        .aside-search { padding: 0 10px 10px; }
         .hist-list { flex: 1; overflow-y: auto; padding: 0 6px 10px; }
         .hist-empty { padding: 18px 10px; color: var(--muted); font-size: 12px; }
 
@@ -173,6 +172,64 @@ const AppHTML = `<!DOCTYPE html>
         }
         .hist-item:hover { background: var(--hover); }
         .hist-item.active { background: var(--panel-2); border-left-color: var(--accent); }
+        .hist-item.flagged:not(.active) { border-left-color: rgba(229, 83, 75, 0.55); }
+        .hist-item.suspect:not(.active) { border-left-color: rgba(212, 178, 63, 0.5); }
+        .hist-tags { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 3px; }
+        .hist-tags .tag { font-size: 10.5px; padding: 0 5px; }
+
+        .aside-tabs { display: flex; border-bottom: 1px solid var(--border); }
+        .aside-tabs button {
+            flex: 1;
+            height: 40px;
+            background: transparent;
+            border: 0;
+            color: var(--muted);
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .aside-tabs button:hover { color: var(--text); }
+        .aside-tabs button.on { color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+        .aside-tabs .num { color: var(--muted); font-weight: 400; margin-left: 3px; }
+        .aside-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .aside-search { padding: 10px 10px 8px; display: flex; flex-direction: column; gap: 6px; }
+        .seg-full { display: flex; }
+        .seg-full button { flex: 1; padding: 0 4px; }
+        .aside-hint { font-size: 11.5px; color: var(--muted); }
+        .aside-hint:empty { display: none; }
+
+        /* Player page & overview */
+        .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+        .page-title { font-size: 20px; font-weight: 600; }
+        .page-sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+        .compare td.r { width: 140px; }
+        .delta-up { color: var(--red); }
+        .delta-down { color: var(--muted); }
+
+        /* Staff confirmation */
+        .tag-confirmed { color: #fff; background: #b8322b; }
+        .confirm-box {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            font-size: 12.5px;
+        }
+        .confirm-box.confirmed {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            border-color: rgba(229, 83, 75, 0.45);
+            background: var(--red-soft);
+            color: #f3c1bd;
+        }
+        .confirm-form { display: flex; gap: 6px; }
+
+        /* Prompt */
+        .prompt-text { color: var(--text-2); font-size: 13px; line-height: 1.5; }
+        .prompt-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
         .hist-name { font-size: 12.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .hist-sub { font-size: 11.5px; color: var(--muted); display: flex; gap: 6px; white-space: nowrap; overflow: hidden; }
         .hist-flag { color: var(--red); font-weight: 600; }
@@ -571,14 +628,34 @@ const AppHTML = `<!DOCTYPE html>
 
     <div class="layout">
         <aside>
-            <div class="aside-head">
-                <span class="aside-title">Historial</span>
-                <span class="muted num" id="histCount"></span>
+            <div class="aside-tabs" role="tablist">
+                <button class="on" id="tabDemos" role="tab" onclick="setAsideTab('demos')">Demos <span class="num" id="histCount"></span></button>
+                <button id="tabPlayers" role="tab" onclick="setAsideTab('players')">Jugadores</button>
             </div>
-            <div class="aside-search">
-                <input class="input" id="histSearch" placeholder="Buscar demo, mapa o jugador" oninput="renderHistory()">
+
+            <div class="aside-pane" id="paneDemos">
+                <div class="aside-search">
+                    <input class="input" id="histSearch" placeholder="Buscar demo, mapa o jugador" oninput="renderHistory()">
+                    <div class="seg seg-full" id="histFilter">
+                        <button class="on" onclick="setHistFilter('all', this)">Todas</button>
+                        <button onclick="setHistFilter('cheat', this)">Cheat</button>
+                        <button onclick="setHistFilter('suspect', this)">Sospechosas</button>
+                        <button onclick="setHistFilter('clean', this)">Limpias</button>
+                    </div>
+                    <select class="input" id="histCategory" onchange="renderHistory()" aria-label="Categoría">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                </div>
+                <div class="hist-list" id="histList"></div>
             </div>
-            <div class="hist-list" id="histList"></div>
+
+            <div class="aside-pane" id="panePlayers" style="display:none;">
+                <div class="aside-search">
+                    <input class="input" id="playerSearch" placeholder="Nombre, SteamID o link de perfil" oninput="searchPlayers()">
+                    <div class="aside-hint" id="playerHint"></div>
+                </div>
+                <div class="hist-list" id="playerList"></div>
+            </div>
         </aside>
 
         <main id="main">
@@ -595,6 +672,9 @@ const AppHTML = `<!DOCTYPE html>
                     <div class="progress"><div class="progress-bar" id="loadingBar"></div></div>
                 </div>
 
+                <div id="overviewView" style="display:none; flex-direction:column; gap:16px;"></div>
+                <div id="playerView" style="display:none; flex-direction:column; gap:16px;"></div>
+
                 <div id="auditContent" style="display:none; flex-direction:column; gap:16px;">
 
                     <div class="notice" id="cacheNotice">
@@ -610,7 +690,7 @@ const AppHTML = `<!DOCTYPE html>
                             <div class="sum-sub" id="sumPlayersSub"></div>
                         </div>
                         <div class="sum-cell">
-                            <div class="sum-label">Marcados</div>
+                            <div class="sum-label">Cheats</div>
                             <div class="sum-value" id="sumFlags">0</div>
                             <div class="sum-sub" id="sumFlagsSub"></div>
                         </div>
@@ -633,7 +713,8 @@ const AppHTML = `<!DOCTYPE html>
                                 <input class="input" id="searchPlayer" placeholder="Buscar jugador" oninput="renderPlayers()">
                                 <div class="seg" id="playerFilter">
                                     <button class="on" onclick="setPlayerFilter('all', this)">Todos</button>
-                                    <button onclick="setPlayerFilter('flagged', this)">Marcados</button>
+                                    <button onclick="setPlayerFilter('cheat', this)">Cheat</button>
+                                    <button onclick="setPlayerFilter('suspect', this)">Sospechosos</button>
                                     <button onclick="setPlayerFilter('clean', this)">Limpios</button>
                                 </div>
                             </div>
@@ -834,6 +915,19 @@ const AppHTML = `<!DOCTYPE html>
         </div>
     </div>
 
+    <!-- Question from Go (duplicate demos) -->
+    <div class="overlay" id="promptModal">
+        <div class="modal" style="width:520px;" role="dialog" aria-labelledby="promptTitle">
+            <div class="modal-head">
+                <div class="modal-title" id="promptTitle"></div>
+            </div>
+            <div class="modal-body">
+                <div class="prompt-text" id="promptText"></div>
+                <div class="prompt-actions" id="promptActions"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="toast" id="toast"></div>
 
     <script>
@@ -890,7 +984,6 @@ const AppHTML = `<!DOCTYPE html>
                 .trim();
         }
 
-        function flagged(p) { return p.flags && p.flags.length > 0; }
 
         function roundOf(tick) {
             const starts = (currentReport && currentReport.header.roundStarts) || [];
@@ -916,14 +1009,97 @@ const AppHTML = `<!DOCTYPE html>
             return '<span class="tag ' + cls + '">' + esc(type) + '</span>';
         }
 
-        function flagTags(p) {
-            return '<span class="tags">' + p.flags.map(f => '<span class="tag tag-red">' + esc(f) + '</span>').join('') + '</span>';
+        // ── Levels & staff confirmations ──────────────────────────────────
+        // Levels come from Go (core/level.go); "confirmed" is a staff decision.
+        let FLAG_LEVELS = {};
+        let confirmedMap = {};
+        const LEVEL_LABEL = { cheat: 'Cheat detectado', sospechoso: 'Sospechoso', conducta: 'Conducta', limpio: 'Limpio' };
+        const LEVEL_TAG = { cheat: 'tag-red', sospechoso: 'tag-yellow', conducta: 'tag-plain' };
+
+        function levelOf(p) { return p.level || 'limpio'; }
+        function confirmationOf(p) { return confirmedMap[String(p.steamId)] || null; }
+        // flagged: cheat or suspicious (worth a look); conduct-only players are not flagged
+        function flagged(p) { const l = levelOf(p); return l === 'cheat' || l === 'sospechoso' || !!confirmationOf(p); }
+
+        function flagTag(f) {
+            return '<span class="tag ' + (LEVEL_TAG[FLAG_LEVELS[f] || 'sospechoso'] || 'tag-plain') + '">' + esc(f) + '</span>';
         }
 
+        function flagTags(p) {
+            return '<span class="tags">' + (p.flags || []).map(flagTag).join('') + '</span>';
+        }
+
+        function levelTag(level) {
+            if (!level || level === 'limpio') return '<span class="muted">Limpio</span>';
+            return '<span class="tag ' + LEVEL_TAG[level] + '">' + LEVEL_LABEL[level] + '</span>';
+        }
+
+        function confirmedTag() { return '<span class="tag tag-confirmed">Confirmado</span>'; }
+
+        // Compact cell for tables: confirmation or level, then the detections
         function resultCell(p) {
-            if (flagged(p)) return flagTags(p);
-            if (p.bhopVerdict === 'Sospechoso') return '<span class="tag tag-yellow">Bhop sospechoso</span>';
-            return '<span class="muted">Limpio</span>';
+            const conf = confirmationOf(p);
+            const head = conf ? confirmedTag() : (levelOf(p) === 'limpio' ? '' : levelTag(levelOf(p)));
+            if (!head && !(p.flags || []).length) return '<span class="muted">Limpio</span>';
+            return '<span class="tags">' + head + (p.flags || []).map(flagTag).join('') + '</span>';
+        }
+
+        function rowMark(p) {
+            if (confirmationOf(p) || levelOf(p) === 'cheat') return ' mark-red';
+            if (levelOf(p) === 'sospechoso') return ' mark-yellow';
+            return '';
+        }
+
+        function refreshConfirmed(then) {
+            if (!window.listConfirmed) { if (then) then(); return; }
+            window.listConfirmed().then(m => {
+                confirmedMap = m || {};
+                if (then) then();
+            });
+        }
+
+        // Re-render whatever is on screen after a confirmation changes
+        function rerenderAll() {
+            if (currentReport) { renderPlayers(); renderDetections(); renderSummary(); }
+            renderPlayerList();
+            if (document.getElementById('playerView').style.display === 'flex' && activePlayer) openPlayerPage(activePlayer);
+        }
+
+        // Block shown in the player modal and on the player page
+        function confirmBlock(steamId, name, level) {
+            const conf = confirmedMap[steamId];
+            if (conf) {
+                return '<div class="confirm-box confirmed">' +
+                    '<div><strong>Confirmado como cheater</strong> por el staff el ' + fmtDate(conf.date) +
+                    (conf.note ? '<div class="muted" style="margin-top:2px;">' + esc(conf.note) + '</div>' : '') + '</div>' +
+                    '<button class="btn" onclick="setConfirmed(\'' + steamId + '\', false)">Quitar confirmación</button></div>';
+            }
+            const hint = level === 'cheat' || level === 'sospechoso'
+                ? 'La app solo marca indicios. Si viste la demo y es cheat, confirmalo: queda guardado para este SteamID.'
+                : 'Si por otra vía sabés que usa cheats, podés confirmarlo igual.';
+            return '<div class="confirm-box" id="confirmBox-' + steamId + '">' +
+                '<div class="muted">' + hint + '</div>' +
+                '<div class="confirm-form">' +
+                    '<input class="input" id="confirmNote-' + steamId + '" placeholder="Nota (opcional): qué viste, en qué ronda" style="flex:1;">' +
+                    '<button class="btn btn-danger" onclick="setConfirmed(\'' + steamId + '\', true, \'' + esc(String(name).replace(/['\\]/g, '')) + '\')">Confirmar cheater</button>' +
+                '</div></div>';
+        }
+
+        function setConfirmed(steamId, on, name) {
+            if (!window.setConfirmed) return;
+            const noteEl = document.getElementById('confirmNote-' + steamId);
+            const note = on && noteEl ? noteEl.value.trim() : '';
+            window.setConfirmed(steamId, name || '', note, on).then(() => {
+                refreshConfirmed(() => {
+                    rerenderAll();
+                    const modalOpen = document.getElementById('playerModal').style.display === 'flex';
+                    if (modalOpen && currentReport) {
+                        const p = currentReport.players.find(x => String(x.steamId) === steamId);
+                        if (p) openPlayer(p);
+                    }
+                    showToast(on ? 'Marcado como cheater confirmado' : 'Confirmación quitada');
+                });
+            });
         }
 
         function emptyRow(cols, text) {
@@ -936,20 +1112,84 @@ const AppHTML = `<!DOCTYPE html>
             document.getElementById('loadingText').innerText = label || ('Analizando... ' + pct + '%');
         }
 
+        // Only one main view is visible at a time
+        const VIEWS = { drop: 'dropzone', loading: 'loadingState', audit: 'auditContent', overview: 'overviewView', player: 'playerView' };
+        function showView(name) {
+            Object.keys(VIEWS).forEach(k => {
+                document.getElementById(VIEWS[k]).style.display = k === name ? 'flex' : 'none';
+            });
+            const demoButtons = name === 'audit' ? 'inline-flex' : 'none';
+            ['btnReanalyze', 'btnPNG', 'btnSummary'].forEach(id => document.getElementById(id).style.display = demoButtons);
+            if (name !== 'audit') document.getElementById('demoMeta').innerHTML = '';
+            document.getElementById('main').scrollTop = 0;
+        }
+
         function showLoading() {
             setProgress(0, 'Abriendo demo...');
-            document.getElementById('dropzone').style.display = 'none';
-            document.getElementById('auditContent').style.display = 'none';
-            document.getElementById('loadingState').style.display = 'flex';
+            showView('loading');
         }
 
         function restoreIdle() {
-            document.getElementById('loadingState').style.display = 'none';
             if (currentReport) {
-                document.getElementById('auditContent').style.display = 'flex';
+                showView('audit');
+                renderDemoMeta();
             } else {
-                document.getElementById('dropzone').style.display = 'flex';
+                showView('drop');
             }
+        }
+
+        function renderDemoMeta() {
+            const h = currentReport.header;
+            document.getElementById('demoMeta').innerHTML =
+                '<span class="map">' + esc(h.mapName) + '</span>' +
+                '<span>' + esc(h.demoFile || '') + '</span>' +
+                '<span>' + esc(stripEmoji(h.serverName) || 'Servidor local') + '</span>';
+        }
+
+        function showPrompt(id, title, text, options) {
+            document.getElementById('promptTitle').innerText = title;
+            document.getElementById('promptText').innerText = text;
+            const actions = document.getElementById('promptActions');
+            actions.innerHTML = '';
+            options.forEach(o => {
+                const b = document.createElement('button');
+                b.className = 'btn' + (o.primary ? ' btn-primary' : '');
+                b.innerText = o.label;
+                b.onclick = () => {
+                    document.getElementById('promptModal').style.display = 'none';
+                    if (window.answerPrompt) window.answerPrompt(id, o.id);
+                };
+                actions.appendChild(b);
+            });
+            document.getElementById('promptModal').style.display = 'flex';
+            const primary = actions.querySelector('.btn-primary');
+            if (primary) primary.focus();
+        }
+
+        // Top cards: cheats (detected or confirmed), suspects and reoffenders
+        function renderSummary() {
+            const players = currentReport.players;
+            const cheats = players.filter(p => confirmationOf(p) || levelOf(p) === 'cheat');
+            const suspects = players.filter(p => !confirmationOf(p) && levelOf(p) === 'sospechoso');
+            const conduct = players.filter(p => levelOf(p) === 'conducta');
+            const reo = players.filter(p => p.previousInfractions > 0);
+
+            document.getElementById('sumPlayers').innerText = players.length;
+            document.getElementById('sumPlayersSub').innerText = (players.length - cheats.length - suspects.length) + ' sin indicios' +
+                (conduct.length ? ' · ' + conduct.length + ' por conducta' : '');
+
+            const sf = document.getElementById('sumFlags');
+            sf.innerText = cheats.length;
+            sf.className = 'sum-value' + (cheats.length ? ' t-red' : '');
+            const parts = [];
+            if (cheats.length) parts.push(cheats.map(p => p.name).join(', '));
+            if (suspects.length) parts.push(suspects.length + (suspects.length === 1 ? ' sospechoso' : ' sospechosos'));
+            document.getElementById('sumFlagsSub').innerText = parts.length ? parts.join(' · ') : 'Nada sospechoso';
+
+            const sr = document.getElementById('sumReo');
+            sr.innerText = reo.length;
+            sr.className = 'sum-value' + (reo.length ? ' t-yellow' : '');
+            document.getElementById('sumReoSub').innerText = reo.length ? reo.map(p => p.name).join(', ') : 'Ninguno con antecedentes';
         }
 
         function loadDemoReport(report, meta) {
@@ -958,39 +1198,17 @@ const AppHTML = `<!DOCTYPE html>
             currentMeta = meta || {};
             timelineShown = 25;
 
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('dropzone').style.display = 'none';
-            document.getElementById('auditContent').style.display = 'flex';
-            ['btnReanalyze', 'btnPNG', 'btnSummary'].forEach(id => document.getElementById(id).style.display = 'inline-flex');
+            showView('audit');
+            renderDemoMeta();
 
             const h = report.header;
             const minutes = Math.max(1, Math.round(h.totalTicks / (h.tickrate * 60)));
             const rounds = (h.roundStarts || []).length;
-            document.getElementById('demoMeta').innerHTML =
-                '<span class="map">' + esc(h.mapName) + '</span>' +
-                '<span>' + esc(h.demoFile || '') + '</span>' +
-                '<span>' + esc(stripEmoji(h.serverName) || 'Servidor local') + '</span>';
 
             document.getElementById('cacheNotice').style.display = currentMeta.fromCache ? 'flex' : 'none';
-
-            const marked = report.players.filter(flagged);
-            const reo = report.players.filter(p => p.previousInfractions > 0);
-
-            document.getElementById('sumPlayers').innerText = report.players.length;
-            document.getElementById('sumPlayersSub').innerText = (report.players.length - marked.length) + ' sin detecciones';
-
-            const sf = document.getElementById('sumFlags');
-            sf.innerText = marked.length;
-            sf.className = 'sum-value' + (marked.length ? ' t-red' : '');
-            document.getElementById('sumFlagsSub').innerText = marked.length ? marked.map(p => p.name).join(', ') : 'Nada sospechoso';
-
             document.getElementById('sumDuration').innerText = minutes + ' min';
             document.getElementById('sumDurationSub').innerText = (rounds ? rounds + ' rondas · ' : '') + h.tickrate + ' tick';
-
-            const sr = document.getElementById('sumReo');
-            sr.innerText = reo.length;
-            sr.className = 'sum-value' + (reo.length ? ' t-yellow' : '');
-            document.getElementById('sumReoSub').innerText = reo.length ? reo.map(p => p.name).join(', ') : 'Ninguno con antecedentes';
+            renderSummary();
 
             renderPlayers();
             renderDetections();
@@ -1010,30 +1228,56 @@ const AppHTML = `<!DOCTYPE html>
             });
         }
 
+        let histFilter = 'all';
+        let asideTab = 'demos';
+
+        function setHistFilter(f, el) {
+            histFilter = f;
+            document.querySelectorAll('#histFilter button').forEach(b => b.classList.toggle('on', b === el));
+            renderHistory();
+        }
+
         function renderHistory() {
             const list = document.getElementById('histList');
             const q = document.getElementById('histSearch').value.toLowerCase();
+            const catSel = document.getElementById('histCategory');
             document.getElementById('histCount').innerText = historyItems.length || '';
-            const items = historyItems.filter(e => !q ||
-                (e.demoName + ' ' + e.mapName + ' ' + (e.flagged || []).join(' ')).toLowerCase().includes(q));
+
+            // Category options come from what is actually in the history
+            const cats = [...new Set(historyItems.flatMap(e => e.flagTypes || []))].sort();
+            const current = catSel.value;
+            catSel.innerHTML = '<option value="">Todas las categorías</option>' +
+                cats.map(c => '<option value="' + esc(c) + '"' + (c === current ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
+            const cat = cats.includes(current) ? current : '';
+
+            const items = historyItems.filter(e => {
+                const lvl = e.level || 'limpio';
+                if (histFilter === 'cheat' && lvl !== 'cheat') return false;
+                if (histFilter === 'suspect' && lvl !== 'sospechoso') return false;
+                if (histFilter === 'clean' && (lvl === 'cheat' || lvl === 'sospechoso')) return false;
+                if (cat && !(e.flagTypes || []).includes(cat)) return false;
+                return !q || (e.demoName + ' ' + e.mapName + ' ' + (e.flagged || []).join(' ')).toLowerCase().includes(q);
+            });
 
             if (historyItems.length === 0) {
                 list.innerHTML = '<div class="hist-empty">Las demos que analices van a aparecer acá.</div>';
                 return;
             }
             if (items.length === 0) {
-                list.innerHTML = '<div class="hist-empty">Nada coincide con la búsqueda.</div>';
+                list.innerHTML = '<div class="hist-empty">Ninguna demo coincide con el filtro.</div>';
                 return;
             }
 
             const activeId = currentMeta && currentMeta.historyId;
             list.innerHTML = items.map(e => {
-                const n = (e.flagged || []).length;
+                const lvl = e.level || 'limpio';
                 const date = (e.analyzedAt || '').slice(0, 10).split('-').reverse().join('/');
-                return '<div class="hist-item' + (e.id === activeId ? ' active' : '') + '" tabindex="0" onclick="openHistoryItem(\'' + e.id + '\')" onkeydown="if(event.key===\'Enter\')openHistoryItem(\'' + e.id + '\')" title="' + esc(e.demoPath) + '">' +
+                const tags = (e.flagTypes || []).map(flagTag).join('');
+                const levelText = { cheat: '<span class="hist-flag">cheat</span>', sospechoso: '<span class="t-yellow">sospechosa</span>', conducta: '<span>conducta</span>', limpio: '<span>limpia</span>' }[lvl];
+                return '<div class="hist-item' + (e.id === activeId ? ' active' : '') + (lvl === 'cheat' ? ' flagged' : (lvl === 'sospechoso' ? ' suspect' : '')) + '" tabindex="0" onclick="openHistoryItem(\'' + e.id + '\')" onkeydown="if(event.key===\'Enter\')openHistoryItem(\'' + e.id + '\')" title="' + esc(e.demoPath) + '">' +
                     '<div class="hist-name">' + esc(e.demoName) + '</div>' +
-                    '<div class="hist-sub"><span>' + esc(e.mapName) + '</span><span>' + date + '</span>' +
-                    (n ? '<span class="hist-flag">' + n + (n === 1 ? ' marcado' : ' marcados') + '</span>' : '') + '</div>' +
+                    '<div class="hist-sub"><span>' + esc(e.mapName) + '</span><span>' + date + '</span>' + levelText + '</div>' +
+                    (tags ? '<div class="hist-tags">' + tags + '</div>' : '') +
                     '<button class="hist-remove" onclick="event.stopPropagation(); removeHistoryItem(\'' + e.id + '\')" title="Quitar del historial (no borra la demo)">' + icon('x', 'ic-sm') + '</button>' +
                     '</div>';
             }).join('');
@@ -1044,7 +1288,182 @@ const AppHTML = `<!DOCTYPE html>
         }
 
         function removeHistoryItem(id) {
-            if (window.removeHistory) window.removeHistory(id).then(refreshHistory);
+            if (window.removeHistory) window.removeHistory(id).then(() => {
+                refreshHistory();
+                if (asideTab === 'players') { searchPlayers(); showOverview(); }
+            });
+        }
+
+        // ── Players across all demos ──────────────────────────────────────
+        let playerRows = [];
+        let activePlayer = null;
+        let searchTimer = null;
+
+        function setAsideTab(tab) {
+            asideTab = tab;
+            document.getElementById('tabDemos').classList.toggle('on', tab === 'demos');
+            document.getElementById('tabPlayers').classList.toggle('on', tab === 'players');
+            document.getElementById('paneDemos').style.display = tab === 'demos' ? 'flex' : 'none';
+            document.getElementById('panePlayers').style.display = tab === 'players' ? 'flex' : 'none';
+            if (tab === 'players') {
+                searchPlayers();
+                if (activePlayer) openPlayerPage(activePlayer); else showOverview();
+            } else {
+                restoreIdle();
+            }
+        }
+
+        function searchPlayers() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                if (!window.listPlayers) return;
+                const q = document.getElementById('playerSearch').value;
+                window.listPlayers(q).then(res => {
+                    playerRows = res.rows || [];
+                    document.getElementById('playerHint').innerText = res.hint ||
+                        (res.steamId && !playerRows.length ? 'Ese SteamID no aparece en ninguna demo analizada.' : '');
+                    renderPlayerList();
+                    if (res.steamId && playerRows.length === 1) openPlayerPage(playerRows[0].steamId);
+                });
+            }, 150);
+        }
+
+        function renderPlayerList() {
+            const list = document.getElementById('playerList');
+            if (!playerRows.length) {
+                list.innerHTML = '<div class="hist-empty">' + (historyItems.length ? 'Ningún jugador coincide.' : 'Analizá demos para ver jugadores acá.') + '</div>';
+                return;
+            }
+            list.innerHTML = playerRows.slice(0, 300).map(r => {
+                const conf = confirmedMap[r.steamId];
+                const tags = (conf ? confirmedTag() : '') + (r.flagTypes || []).map(flagTag).join('');
+                const mark = conf || r.level === 'cheat' ? ' flagged' : (r.level === 'sospechoso' ? ' suspect' : '');
+                return '<div class="hist-item' + (r.steamId === activePlayer ? ' active' : '') + mark + '" tabindex="0" onclick="openPlayerPage(\'' + r.steamId + '\')" onkeydown="if(event.key===\'Enter\')openPlayerPage(\'' + r.steamId + '\')">' +
+                    '<div class="hist-name">' + esc(r.name) + '</div>' +
+                    '<div class="hist-sub"><span>' + r.demos + (r.demos === 1 ? ' demo' : ' demos') + '</span>' +
+                    (r.flaggedDemos ? (r.level === 'cheat' ? '<span class="hist-flag">cheat en ' : '<span class="t-yellow">sospechoso en ') + r.flaggedDemos + '</span>' : (r.level === 'conducta' ? '<span>conducta</span>' : '')) + '</div>' +
+                    (tags ? '<div class="hist-tags">' + tags + '</div>' : '') +
+                    '</div>';
+            }).join('');
+        }
+
+        function fmtDate(ts) { return (ts || '').slice(0, 10).split('-').reverse().join('/'); }
+        function fmtNum(v, suffix) { return v === null || v === undefined ? '–' : v + (suffix || ''); }
+
+        // One row of "this player vs everyone": the player's value turns red when it is
+        // well above the average of all players (twice as high, or +15 points of perfs).
+        function compareRow(label, mine, avg, suffix, higherIsWorse, perfLike) {
+            let cls = '';
+            if (mine !== null && mine !== undefined && avg !== null && avg !== undefined && higherIsWorse) {
+                const worse = perfLike ? mine - avg >= 15 : (avg > 0 ? mine >= avg * 2 && mine - avg >= 1 : mine >= 1);
+                if (worse) cls = 't-red';
+            }
+            return '<tr><td>' + label + '</td><td class="r ' + cls + '">' + fmtNum(mine, suffix) + '</td><td class="r muted">' + fmtNum(avg, suffix) + '</td></tr>';
+        }
+
+        function showOverview() {
+            activePlayer = null;
+            renderPlayerList();
+            if (!window.getOverview) return;
+            window.getOverview().then(ov => {
+                const el = document.getElementById('overviewView');
+                const a = ov.averages || {};
+                const flags = Object.keys(ov.flagCounts || {}).sort((x, y) => ov.flagCounts[y] - ov.flagCounts[x]);
+                el.innerHTML =
+                    '<div class="page-head"><div><div class="page-title">Todas las demos</div>' +
+                    '<div class="page-sub">Promedios de cada jugador en cada demo del historial. Elegí un jugador a la izquierda o buscalo por SteamID.</div></div></div>' +
+                    '<div class="summary">' +
+                        '<div class="sum-cell"><div class="sum-label">Demos</div><div class="sum-value">' + ov.demos + '</div><div class="sum-sub">' + ov.cheatDemos + ' con cheat · ' + ov.suspectDemos + ' sospechosas</div></div>' +
+                        '<div class="sum-cell"><div class="sum-label">Jugadores distintos</div><div class="sum-value">' + ov.players + '</div><div class="sum-sub">' +
+                            ov.cheatPlayers + ' cheat · ' + ov.suspectPlayers + ' sospechosos · ' + Object.keys(confirmedMap).length + ' confirmados</div></div>' +
+                        '<div class="sum-cell"><div class="sum-label">Perfs promedio</div><div class="sum-value">' + fmtNum(a.perfRatio, '%') + '</div><div class="sum-sub">jugadores con 5 saltos o más</div></div>' +
+                        '<div class="sum-cell"><div class="sum-label">Reacción promedio</div><div class="sum-value">' + fmtNum(a.reactionMs, ' ms') + '</div><div class="sum-sub">' + fmtNum(a.snapsPerDemo) + ' snaps por demo</div></div>' +
+                    '</div>' +
+                    '<section class="panel"><div class="panel-head"><div class="panel-title">Detecciones por categoría</div></div>' +
+                    '<div class="table-wrap"><table><thead><tr><th>Categoría</th><th class="r">Veces</th></tr></thead><tbody>' +
+                    (flags.length ? flags.map(f => '<tr><td>' + flagTag(f) + '</td><td class="r">' + ov.flagCounts[f] + '</td></tr>').join('')
+                                  : emptyRow(2, 'Todavía no hay detecciones en el historial.')) +
+                    '</tbody></table></div></section>';
+                showView('overview');
+            });
+        }
+
+        function openPlayerPage(steamId) {
+            if (!window.getPlayerDetail) return;
+            closePlayer();
+            if (asideTab !== 'players') {
+                asideTab = 'players';
+                document.getElementById('tabDemos').classList.remove('on');
+                document.getElementById('tabPlayers').classList.add('on');
+                document.getElementById('paneDemos').style.display = 'none';
+                document.getElementById('panePlayers').style.display = 'flex';
+                searchPlayers();
+            }
+            activePlayer = steamId;
+            renderPlayerList();
+            window.getPlayerDetail(steamId).then(d => {
+                const el = document.getElementById('playerView');
+                if (!d) {
+                    el.innerHTML = '<div class="muted">Este jugador no aparece en el historial.</div>';
+                    showView('player');
+                    return;
+                }
+                const a = d.averages || {}, g = (d.global && d.global.averages) || {};
+                const flagKeys = Object.keys(d.flagCounts || {});
+                el.innerHTML =
+                    '<div class="page-head"><div style="min-width:0;"><div class="page-title">' + esc(d.name) + '</div>' +
+                    '<div class="page-sub mono">SteamID64 ' + esc(d.steamId) + '</div>' +
+                    (d.names.length > 1 ? '<div class="page-sub">También jugó como: ' + d.names.filter(n => n !== d.name).map(esc).join(', ') + '</div>' : '') +
+                    '</div><div class="modal-actions">' +
+                        '<button class="btn" onclick="copyText(\'' + d.steamId + '\', \'SteamID copiado\')">' + icon('copy', 'ic-sm') + 'SteamID</button>' +
+                        '<button class="btn" onclick="openSteam(\'' + d.steamId + '\')">' + icon('external', 'ic-sm') + 'Steam</button>' +
+                    '</div></div>' +
+                    '<div style="display:flex; flex-direction:column; gap:8px;">' +
+                        '<div>' + (confirmedMap[d.steamId] ? confirmedTag() : levelTag(d.level)) +
+                        ' <span class="muted" style="font-size:12px;">peor resultado en todas sus demos</span></div>' +
+                        confirmBlock(d.steamId, d.name, d.level) +
+                    '</div>' +
+                    '<div class="summary">' +
+                        '<div class="sum-cell"><div class="sum-label">Demos</div><div class="sum-value">' + d.demos + '</div><div class="sum-sub">del ' + fmtDate(d.firstSeen) + ' al ' + fmtDate(d.lastSeen) + '</div></div>' +
+                        '<div class="sum-cell"><div class="sum-label">Marcado en</div><div class="sum-value' + (d.flaggedDemos ? ' t-red' : '') + '">' + d.flaggedDemos + '</div><div class="sum-sub">' + (flagKeys.length ? flagKeys.map(f => f + ' ×' + d.flagCounts[f]).join(', ') : 'ninguna demo') + '</div></div>' +
+                        '<div class="sum-cell"><div class="sum-label">Incidentes</div><div class="sum-value">' + d.totals.incidents + '</div><div class="sum-sub">' + fmtNum(a.incidentsPerDemo) + ' por demo</div></div>' +
+                        '<div class="sum-cell"><div class="sum-label">Kills cegado / humo</div><div class="sum-value">' + d.totals.blind + ' / ' + d.totals.smoke + '</div><div class="sum-sub">macro: ' + d.totals.macro + '</div></div>' +
+                    '</div>' +
+                    '<section class="panel"><div class="panel-head"><div class="panel-title">Promedio del jugador vs. todos</div><span class="muted">En rojo, lo que está muy por encima del promedio general</span></div>' +
+                    '<div class="table-wrap"><table class="compare"><thead><tr><th></th><th class="r">Este jugador</th><th class="r">Promedio general</th></tr></thead><tbody>' +
+                        compareRow('Perfs de bhop', a.perfRatio, g.perfRatio, '%', true, true) +
+                        compareRow('Reacción (triggerbot)', a.reactionMs, g.reactionMs, ' ms', false) +
+                        compareRow('Snaps por demo', a.snapsPerDemo, g.snapsPerDemo, '', true) +
+                        compareRow('Silent aim por demo', a.silentPerDemo, g.silentPerDemo, '', true) +
+                        compareRow('Wallhack por demo', a.wallPerDemo, g.wallPerDemo, '', true) +
+                        compareRow('Incidentes por demo', a.incidentsPerDemo, g.incidentsPerDemo, '', true) +
+                    '</tbody></table></div></section>' +
+                    '<section class="panel"><div class="panel-head"><div class="panel-title">Demos <span class="count">' + d.demos + '</span></div><span class="muted">Click para abrir la demo</span></div>' +
+                    '<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Demo</th><th>Mapa</th><th class="r">Perfs</th><th class="r">Reacción</th><th class="r">Snaps</th><th class="r">Wallhack</th><th class="r">Resultado</th></tr></thead><tbody>' +
+                    d.appearances.map(ap =>
+                        '<tr class="click' + (ap.flags && ap.flags.length ? ' mark-red' : '') + '" onclick="openDemoFromPlayer(\'' + ap.entryId + '\')">' +
+                            '<td class="num">' + fmtDate(ap.analyzedAt) + '</td>' +
+                            '<td class="player">' + esc(ap.demoName) + '</td>' +
+                            '<td class="muted">' + esc(ap.mapName) + '</td>' +
+                            '<td class="r">' + (ap.totalJumps >= 5 ? ap.perfRatio.toFixed(1) + '%' : '<span class="muted">–</span>') + '</td>' +
+                            '<td class="r">' + fmtNum(ap.reactionMs, ' ms') + '</td>' +
+                            '<td class="r">' + ap.snaps + '</td>' +
+                            '<td class="r">' + ap.wallhack + '</td>' +
+                            '<td class="r">' + (ap.flags && ap.flags.length ? '<span class="tags">' + ap.flags.map(flagTag).join('') + '</span>' : '<span class="muted">Limpio</span>') + '</td>' +
+                        '</tr>'
+                    ).join('') +
+                    '</tbody></table></div></section>';
+                showView('player');
+            });
+        }
+
+        function openDemoFromPlayer(entryId) {
+            asideTab = 'demos';
+            document.getElementById('tabDemos').classList.add('on');
+            document.getElementById('tabPlayers').classList.remove('on');
+            document.getElementById('paneDemos').style.display = 'flex';
+            document.getElementById('panePlayers').style.display = 'none';
+            openHistoryItem(entryId);
         }
 
         // ── Players ───────────────────────────────────────────────────────
@@ -1071,7 +1490,8 @@ const AppHTML = `<!DOCTYPE html>
             const q = document.getElementById('searchPlayer').value.toLowerCase();
             let players = currentReport.players.slice();
             if (q) players = players.filter(p => p.name.toLowerCase().includes(q));
-            if (playerFilter === 'flagged') players = players.filter(flagged);
+            if (playerFilter === 'cheat') players = players.filter(p => confirmationOf(p) || levelOf(p) === 'cheat');
+            if (playerFilter === 'suspect') players = players.filter(p => !confirmationOf(p) && levelOf(p) === 'sospechoso');
             if (playerFilter === 'clean') players = players.filter(p => !flagged(p));
 
             players.sort((a, b) => {
@@ -1089,7 +1509,7 @@ const AppHTML = `<!DOCTYPE html>
             body.innerHTML = '';
             players.forEach(p => {
                 const tr = document.createElement('tr');
-                tr.className = 'click' + (flagged(p) ? ' mark-red' : (p.bhopVerdict === 'Sospechoso' ? ' mark-yellow' : ''));
+                tr.className = 'click' + rowMark(p);
                 tr.onclick = () => openPlayer(p);
                 const perfCls = p.perfRatio >= 75 ? 't-red' : (p.perfRatio >= 55 ? 't-yellow' : '');
                 tr.innerHTML =
@@ -1106,16 +1526,18 @@ const AppHTML = `<!DOCTYPE html>
         }
 
         function renderDetections() {
-            const rows = currentReport.players.filter(p => flagged(p) && p.flags.some(f => f !== 'AUTOBUNNY' && f !== 'SOSPECHOSO-BHOP'));
+            // Everyone worth a look except bhop-only cases, which the players table already shows
+            const rows = currentReport.players.filter(p => flagged(p) &&
+                (confirmationOf(p) || p.flags.some(f => f !== 'AUTOBUNNY' && f !== 'SOSPECHOSO-BHOP')));
             const body = document.getElementById('detectBody');
             if (rows.length === 0) {
-                body.innerHTML = emptyRow(7, 'Nadie superó los umbrales de triggerbot, aimlock, silent aim, macro ni wallhack.');
+                body.innerHTML = emptyRow(7, 'Nadie superó los umbrales de triggerbot, aimlock, silent aim, macro, wallhack, kills cegado ni humo.');
                 return;
             }
             body.innerHTML = '';
             rows.forEach(p => {
                 const tr = document.createElement('tr');
-                tr.className = 'click mark-red';
+                tr.className = 'click' + rowMark(p);
                 tr.onclick = () => openPlayer(p);
                 const hasTrig = p.triggerAvgMs !== null && p.triggerAvgMs !== undefined;
                 tr.innerHTML =
@@ -1125,7 +1547,7 @@ const AppHTML = `<!DOCTYPE html>
                     '<td class="r">' + (p.macroHits || '<span class="muted">–</span>') + '</td>' +
                     '<td class="r">' + p.flashKills + ' / ' + p.smokeKills + '</td>' +
                     '<td class="r">' + (p.wallTrackCount || '<span class="muted">–</span>') + '</td>' +
-                    '<td class="r">' + flagTags(p) + '</td>';
+                    '<td class="r">' + resultCell(p) + '</td>';
                 body.appendChild(tr);
             });
         }
@@ -1217,7 +1639,7 @@ const AppHTML = `<!DOCTYPE html>
         }
 
         function openPlayer(p) {
-            const isFlagged = flagged(p);
+            const isCheat = !!confirmationOf(p) || levelOf(p) === 'cheat';
             const hasSteam = !!p.steamId && p.steamId !== "0";
             const sid = String(p.steamId);
 
@@ -1227,7 +1649,7 @@ const AppHTML = `<!DOCTYPE html>
             let actions = '';
             if (hasSteam) actions += '<button class="btn" onclick="openSteam(\'' + sid + '\')">' + icon('external', 'ic-sm') + 'Steam</button>';
             if (hasSteam) actions += '<button class="btn" onclick="exportEvidence(\'' + sid + '\')">' + icon('file', 'ic-sm') + 'Exportar evidencia</button>';
-            if (hasSteam && isFlagged) actions += '<button class="btn btn-danger" onclick="copyBan(\'' + sid + '\')">' + icon('ban', 'ic-sm') + 'Copiar ban</button>';
+            if (hasSteam && isCheat) actions += '<button class="btn btn-danger" onclick="copyBan(\'' + sid + '\')">' + icon('ban', 'ic-sm') + 'Copiar ban</button>';
             actions += '<button class="btn btn-plain btn-icon" onclick="closePlayer()" title="Cerrar">' + icon('x') + '</button>';
             document.getElementById('pmActions').innerHTML = actions;
 
@@ -1238,7 +1660,16 @@ const AppHTML = `<!DOCTYPE html>
                 html += '<div class="callout callout-red">Tiene ' + p.previousInfractions + (p.previousInfractions === 1 ? ' detección anterior' : ' detecciones anteriores') + ' en demos que analizaste antes.</div>';
             }
 
-            html += '<div><div class="block-title">Resultado</div>' + (isFlagged ? flagTags(p) : resultCell(p)) + '</div>';
+            html += '<div><div class="block-title">Resultado</div>' + resultCell(p) +
+                (levelOf(p) !== 'limpio' && !confirmationOf(p)
+                    ? '<div class="muted" style="margin-top:6px; font-size:12px;">' + ({
+                        cheat: 'Superó un umbral fuerte de detección. Revisá la demo antes de sancionar.',
+                        sospechoso: 'Hay indicios, pero no alcanzan para decir que es cheat. Conviene mirar la demo.',
+                        conducta: 'No es cheat: es algo de comportamiento para el staff (AFK, flashes al equipo).'
+                    })[levelOf(p)] + '</div>'
+                    : '') +
+                '</div>';
+            if (hasSteam) html += '<div>' + confirmBlock(sid, p.name, levelOf(p)) + '</div>';
 
             html += '<div><div class="block-title">Métricas</div><div class="stats">' +
                 stat('Saltos', p.totalJumps) +
@@ -1297,31 +1728,25 @@ const AppHTML = `<!DOCTYPE html>
             document.getElementById('pmBody').scrollTop = 0;
 
             if (document.getElementById('roundChart')) drawRoundChart(document.getElementById('roundChart'), incs);
-            if (hasSteam && window.getPlayerProfile) {
-                window.getPlayerProfile(sid).then(prof => renderProfile(prof));
+            if (hasSteam && window.getPlayerDetail) {
+                window.getPlayerDetail(sid).then(d => renderProfile(d));
             }
         }
 
-        function renderProfile(prof) {
+        function renderProfile(d) {
             const el = document.getElementById('pmProfile');
-            if (!el || !prof) return;
-            const fmt = s => (s || '').slice(0, 10).split('-').reverse().join('/');
-            let html = '<div class="block-title">En tus demos</div><dl class="kv">' +
-                '<dt>Partidas analizadas</dt><dd class="num">' + prof.matchCount + '</dd>' +
-                '<dt>Primera vez</dt><dd>' + fmt(prof.firstSeen) + '</dd>' +
-                '<dt>Última vez</dt><dd>' + fmt(prof.lastSeen) + '</dd>' +
-                ((prof.knownNames || []).length > 1 ? '<dt>Otros nombres</dt><dd>' + prof.knownNames.map(esc).join(', ') + '</dd>' : '') +
-                '</dl>';
-            const inf = (prof.infractions || []).slice().reverse();
-            if (inf.length) {
-                html += '<div class="table-wrap" style="margin-top:10px; border:1px solid var(--border); border-radius:var(--r);"><table>' +
-                    '<thead><tr><th>Fecha</th><th>Mapa</th><th>Demo</th><th>Detecciones</th></tr></thead><tbody>' +
-                    inf.slice(0, 15).map(r =>
-                        '<tr><td class="num">' + fmt(r.date) + '</td><td>' + esc(r.mapName) + '</td><td class="muted">' + esc(r.demoName) + '</td>' +
-                        '<td><span class="tags">' + (r.flags || []).map(f => '<span class="tag tag-red">' + esc(f) + '</span>').join('') + '</span></td></tr>'
-                    ).join('') + '</tbody></table></div>';
-            }
-            el.innerHTML = html;
+            if (!el || !d) return;
+            const a = d.averages || {};
+            const flagKeys = Object.keys(d.flagCounts || {});
+            el.innerHTML = '<div class="block-title">En todas tus demos <span class="count">' + d.demos + '</span></div>' +
+                '<dl class="kv">' +
+                    '<dt>Marcado en</dt><dd>' + (d.flaggedDemos ? '<span class="t-red">' + d.flaggedDemos + ' de ' + d.demos + '</span> · ' + flagKeys.map(f => esc(f) + ' ×' + d.flagCounts[f]).join(', ') : 'ninguna') + '</dd>' +
+                    '<dt>Perfs promedio</dt><dd>' + fmtNum(a.perfRatio, '%') + '</dd>' +
+                    '<dt>Reacción promedio</dt><dd>' + fmtNum(a.reactionMs, ' ms') + '</dd>' +
+                    '<dt>Snaps por demo</dt><dd>' + fmtNum(a.snapsPerDemo) + '</dd>' +
+                    (d.names.length > 1 ? '<dt>Otros nombres</dt><dd>' + d.names.filter(n => n !== d.name).map(esc).join(', ') + '</dd>' : '') +
+                '</dl>' +
+                '<div style="margin-top:10px;"><button class="btn" onclick="openPlayerPage(\'' + d.steamId + '\')">Ver ficha completa</button></div>';
         }
 
         // Single-series bar chart: incidents per round, with a per-bar hover breakdown.
@@ -1398,7 +1823,8 @@ const AppHTML = `<!DOCTYPE html>
         function copyBan(sid) {
             const p = findPlayer(sid);
             if (!p) return;
-            const cmd = 'sm_ban #' + sid + ' 0 "SourceSight: ' + p.flags.join(' + ') + '"';
+            const reason = (p.flags || []).length ? p.flags.join(' + ') : 'confirmado por staff';
+            const cmd = 'sm_ban #' + sid + ' 0 "SourceSight: ' + reason + '"';
             copyText(cmd, 'Comando de ban copiado');
         }
 
@@ -1454,7 +1880,8 @@ const AppHTML = `<!DOCTYPE html>
                 md += 'Sin detecciones.\n';
             } else {
                 marked.forEach(p => {
-                    md += '- **' + p.name + '** (' + p.steamId + '): ' + q + p.flags.join(' + ') + q + '\n';
+                    const label = confirmationOf(p) ? 'Confirmado' : LEVEL_LABEL[levelOf(p)];
+                    md += '- **' + p.name + '** (' + p.steamId + ') · ' + label + ((p.flags || []).length ? ': ' + q + p.flags.join(' + ') + q : '') + '\n';
                 });
             }
             const tl = currentReport.timeline || [];
@@ -1599,9 +2026,14 @@ const AppHTML = `<!DOCTYPE html>
                     document.getElementById('aboutRepo').innerText = info.repoUrl.replace('https://', '');
                 });
             }
-            refreshHistory();
+            // Flag levels and staff confirmations must be known before anything renders
+            const levels = window.getFlagLevels ? window.getFlagLevels().then(m => { FLAG_LEVELS = m || {}; }) : Promise.resolve();
+            const confirmed = new Promise(resolve => refreshConfirmed(resolve));
+            Promise.all([levels, confirmed]).finally(() => {
+                refreshHistory();
+                if (window.onAppReady) window.onAppReady();
+            });
             setTimeout(() => checkUpdates(false), 1500);
-            if (window.onAppReady) window.onAppReady();
         }
         window.addEventListener('DOMContentLoaded', notifyReady);
         setTimeout(notifyReady, 150);

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -15,6 +16,9 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"sourcesight/pkg/core"
+	"sourcesight/pkg/db"
+	"sourcesight/pkg/history"
 	"sourcesight/pkg/parser"
 	"sourcesight/pkg/report"
 	"sourcesight/pkg/version"
@@ -163,9 +167,10 @@ func main() {
 		}
 		defer resp.Body.Close()
 
-		tempDir := "temp"
+		// Keep the original file name: it is what the history shows for this demo
+		tempDir := filepath.Join("temp", strconv.FormatInt(time.Now().UnixNano(), 36))
 		_ = os.MkdirAll(tempDir, 0755)
-		tempDem := filepath.Join(tempDir, fmt.Sprintf("demo_%d.dem", time.Now().UnixNano()))
+		tempDem := filepath.Join(tempDir, filepath.Base(demAtt.Filename))
 		outDem, err := os.Create(tempDem)
 		if err != nil {
 			_, _ = s.ChannelMessageEdit(m.ChannelID, statusMsg.ID, fmt.Sprintf("No se pudo guardar la demo: %v", err))
@@ -173,7 +178,7 @@ func main() {
 		}
 		_, _ = io.Copy(outDem, resp.Body)
 		outDem.Close()
-		defer os.Remove(tempDem)
+		defer os.RemoveAll(tempDir)
 
 		// Parse
 		start := time.Now()
@@ -183,6 +188,19 @@ func main() {
 			return
 		}
 		elapsed := time.Since(start)
+
+		// Same match analyzed before (here or in the app): show it, don't count it twice
+		dupNote := ""
+		if similar := history.FindSimilar(rep, ""); len(similar) > 0 {
+			dupNote = fmt.Sprintf("Esta partida ya se analizó el %s (`%s`): no se suma de nuevo a los promedios ni a reincidencias.",
+				shortDate(similar[0].AnalyzedAt), similar[0].DemoName)
+		} else {
+			sha, _ := history.FileSHA256(tempDem)
+			if _, err := history.Save(tempDem, rep, sha); err != nil {
+				fmt.Printf("[-] No se pudo guardar en el historial: %v\n", err)
+			}
+			db.GetDatabase().RecordReport(rep)
+		}
 
 		// Render PNG
 		tempPng := filepath.Join(tempDir, fmt.Sprintf("report_%d.png", time.Now().UnixNano()))
@@ -194,17 +212,39 @@ func main() {
 
 		// Build embed
 		var flaggedNames []string
+		cheats, suspects := 0, 0
+		confirmed := db.GetDatabase().Confirmations()
 		for _, p := range rep.Players {
-			if len(p.Flags) > 0 {
-				flaggedNames = append(flaggedNames, fmt.Sprintf("• **%s** — `%s`", p.Name, strings.Join(p.Flags, " + ")))
+			label := levelLabel(p.Level)
+			if _, ok := confirmed[strconv.FormatUint(p.SteamID, 10)]; ok {
+				label = "Confirmado por staff"
+				cheats++
+			} else if p.Level == core.LevelCheat {
+				cheats++
+			} else if p.Level == core.LevelSuspect {
+				suspects++
+			} else {
+				continue
 			}
+			line := fmt.Sprintf("• **%s** · %s", p.Name, label)
+			if len(p.Flags) > 0 {
+				line += fmt.Sprintf(": `%s`", strings.Join(p.Flags, " + "))
+			}
+			flaggedNames = append(flaggedNames, line)
 		}
 
 		color := 0x57ab5a // green
-		title := "Sin detecciones"
-		if len(flaggedNames) > 0 {
+		title := "Sin cheats detectados"
+		switch {
+		case cheats > 0:
 			color = 0xe5534b // red
-			title = fmt.Sprintf("%d jugador(es) marcado(s)", len(flaggedNames))
+			title = fmt.Sprintf("%d con cheat detectado", cheats)
+			if suspects > 0 {
+				title += fmt.Sprintf(", %d sospechoso(s)", suspects)
+			}
+		case suspects > 0:
+			color = 0xd4b23f // yellow
+			title = fmt.Sprintf("%d sospechoso(s)", suspects)
 		}
 
 		topInfo := "Sin jugadores suficientes."
@@ -233,8 +273,9 @@ func main() {
 		}
 
 		embed := &discordgo.MessageEmbed{
-			Title: title,
-			Color: color,
+			Title:       title,
+			Description: dupNote,
+			Color:       color,
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Mapa", Value: fmt.Sprintf("`%s`", rep.Header.MapName), Inline: true},
 				{Name: "Tickrate", Value: fmt.Sprintf("`%d`", rep.Header.Tickrate), Inline: true},
@@ -288,4 +329,11 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 	fmt.Println("\n[+] Cerrando bot...")
+}
+
+func shortDate(ts string) string {
+	if len(ts) < 10 {
+		return ts
+	}
+	return ts[8:10] + "/" + ts[5:7] + "/" + ts[0:4]
 }

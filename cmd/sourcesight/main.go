@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"sourcesight/pkg/core"
+	"sourcesight/pkg/db"
 	"sourcesight/pkg/gui"
 	"sourcesight/pkg/parser"
 	"sourcesight/pkg/report"
@@ -91,6 +92,8 @@ func runCLI(demoPath string) {
 		fmt.Scanln()
 		os.Exit(1)
 	}
+	// Count the match for reoffender tracking; the same match is never counted twice
+	db.GetDatabase().RecordReport(rep)
 
 	elapsed := time.Since(start)
 

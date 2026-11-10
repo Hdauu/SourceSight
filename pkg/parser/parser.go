@@ -495,11 +495,26 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		return timeline[i].Tick < timeline[j].Tick
 	})
 
-	// Database integration: lookup reoffenders, attach chat, record match history
+	// Fingerprint the match so duplicates are recognized, then look up reoffenders.
+	// Recording the match in the database is up to the caller (db.RecordReport), once
+	// it has decided the demo is not a duplicate.
+	var steamIDs []uint64
+	for _, ps := range playerStats {
+		if ps.SteamID != 0 {
+			steamIDs = append(steamIDs, ps.SteamID)
+		}
+	}
+	matchID := core.MatchFingerprint(header.MapName, header.PlaybackTicks, len(roundStarts), steamIDs)
+
 	pdb := db.GetDatabase()
 	for i := range playerStats {
-		aliases, infractions := pdb.LookupPlayer(playerStats[i].SteamID)
-		playerStats[i].PreviousInfractions = len(infractions)
+		aliases, infractions := pdb.LookupPlayer(playerStats[i].SteamID, matchID)
+		// Only cheat or suspect detections make a reoffender; past conduct issues don't
+		for _, inf := range infractions {
+			if l := core.LevelOf(inf.Flags); l == core.LevelCheat || l == core.LevelSuspect {
+				playerStats[i].PreviousInfractions++
+			}
+		}
 		playerStats[i].PreviousNames = aliases
 
 		// Attach player chat messages
@@ -508,15 +523,6 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 				playerStats[i].ChatMessages = append(playerStats[i].ChatMessages, msg)
 			}
 		}
-
-		pdb.RecordPlayerMatch(
-			playerStats[i].SteamID,
-			playerStats[i].Name,
-			header.MapName,
-			opts.DemoPath,
-			playerStats[i].Flags,
-			playerStats[i].PerfRatio,
-		)
 	}
 
 	report := &core.DemoReport{
@@ -528,6 +534,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 			Date:        time.Now().Format("2006-01-02"),
 			DemoFile:    filepath.Base(opts.DemoPath),
 			RoundStarts: roundStarts,
+			MatchID:     matchID,
 		},
 		Players:  playerStats,
 		AdminLog: adminLog,

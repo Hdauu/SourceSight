@@ -156,6 +156,7 @@ type PlayerStats struct {
 	IsAfk               bool               `json:"isAfk"`
 	Flags               []string           `json:"flags"`
 	Verdict             string             `json:"verdict"`
+	Level               string             `json:"level"` // see level.go
 	Incidents           []TimelineIncident `json:"incidents"`
 }
 
@@ -311,6 +312,7 @@ func (ps *PlayerState) ComputeStats(tickrate int) PlayerStats {
 		IsAfk:          isAfk,
 		Flags:          flags,
 		Verdict:        verdict,
+		Level:          LevelOf(flags),
 		Incidents:      incs,
 	}
 }
@@ -324,6 +326,9 @@ type DemoHeader struct {
 	DemoFile   string `json:"demoFile"`
 	// RoundStarts holds the tick each round began, in order (round N starts at index N-1)
 	RoundStarts []int `json:"roundStarts"`
+	// MatchID fingerprints the match itself (see MatchFingerprint), so the same match
+	// is recognized even when the file was renamed or copied.
+	MatchID string `json:"matchId"`
 }
 
 type AdminEvent struct {

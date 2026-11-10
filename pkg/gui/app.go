@@ -2,6 +2,7 @@ package gui
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -23,6 +24,7 @@ import (
 	"sourcesight/pkg/launcher"
 	"sourcesight/pkg/parser"
 	"sourcesight/pkg/report"
+	"sourcesight/pkg/steamid"
 	"sourcesight/pkg/update"
 	"sourcesight/pkg/version"
 )
@@ -157,13 +159,72 @@ type reportMeta struct {
 	QueueTotal int    `json:"queueTotal"`
 }
 
-// analyze returns the report for one demo, from the history cache unless force is set.
+// errSkipped marks a demo the user chose not to keep (duplicate dialog).
+var errSkipped = errors.New("omitida")
+
+type promptOption struct {
+	ID      string `json:"id"`
+	Label   string `json:"label"`
+	Primary bool   `json:"primary,omitempty"`
+}
+
+var (
+	promptSeq     atomic.Int64
+	promptWaiters sync.Map // id -> chan string
+)
+
+// ask shows a modal question in the page and blocks until the user picks an option.
+func (a *app) ask(title, text string, options []promptOption) string {
+	id := fmt.Sprint(promptSeq.Add(1))
+	ch := make(chan string, 1)
+	promptWaiters.Store(id, ch)
+	defer promptWaiters.Delete(id)
+	a.call("showPrompt", id, title, text, options)
+	select {
+	case choice := <-ch:
+		return choice
+	case <-time.After(30 * time.Minute):
+		return ""
+	}
+}
+
+func shortDate(ts string) string {
+	if len(ts) < 10 {
+		return ts
+	}
+	return ts[8:10] + "/" + ts[5:7] + "/" + ts[0:4]
+}
+
+// analyze returns the report for one demo. Unless force is set it reuses the cached
+// report of the same file, and asks before storing a duplicate of a stored match.
 func (a *app) analyze(path string, force bool, label string) (*core.DemoReport, *history.Entry, bool, error) {
 	if !force {
 		if rep, entry := history.Lookup(path); rep != nil {
 			return rep, entry, true, nil
 		}
 	}
+	name := filepath.Base(path)
+	ownID, _ := history.ID(path)
+
+	// Byte-identical copy stored under another name or folder
+	a.call("setProgress", 0, label+" — verificando")
+	sha, _ := history.FileSHA256(path)
+	if !force {
+		if dup := history.FindByFileHash(sha); dup != nil && dup.ID != ownID {
+			choice := a.ask("Demo repetida",
+				fmt.Sprintf("«%s» es el mismo archivo que «%s», que analizaste el %s.", name, dup.DemoName, shortDate(dup.AnalyzedAt)),
+				[]promptOption{{"open", "Abrir la guardada", true}, {"analyze", "Analizar igual", false}, {"skip", "Saltear", false}})
+			switch choice {
+			case "open":
+				rep, entry, err := history.Open(dup.ID)
+				return rep, entry, true, err
+			case "analyze":
+			default:
+				return nil, nil, false, errSkipped
+			}
+		}
+	}
+
 	rep, err := parser.ParseDemo(path, parser.ParserOptions{
 		OnProgress: func(fraction float64) {
 			pct := int(fraction * 100)
@@ -176,10 +237,40 @@ func (a *app) analyze(path string, force bool, label string) (*core.DemoReport, 
 	if err != nil {
 		return nil, nil, false, err
 	}
-	entry, err := history.Save(path, rep)
+
+	pdb := db.GetDatabase()
+	if force {
+		// Re-analysis: forget what this file counted before, then record the new result
+		if _, old := history.Lookup(path); old != nil {
+			pdb.RemoveMatch(old.MatchID)
+		}
+	}
+
+	// Same match by content: a renamed copy, a second recording or a trimmed file
+	if similar := history.FindSimilar(rep, ownID); len(similar) > 0 {
+		old := similar[0]
+		choice := a.ask("Partida repetida",
+			fmt.Sprintf("«%s» parece la misma partida que «%s» (%s, %d rondas, mismos jugadores), analizada el %s. Si guardás las dos, la partida cuenta doble en los promedios del historial.",
+				name, old.DemoName, old.MapName, old.Rounds, shortDate(old.AnalyzedAt)),
+			[]promptOption{{"replace", "Reemplazar la anterior", true}, {"keep", "Guardar las dos", false}, {"discard", "Descartar esta", false}})
+		switch choice {
+		case "replace":
+			for _, s := range similar {
+				if mid, _ := history.Remove(s.ID); mid != "" && !history.MatchInUse(mid) {
+					pdb.RemoveMatch(mid)
+				}
+			}
+		case "keep":
+		default:
+			return nil, nil, false, errSkipped
+		}
+	}
+
+	entry, err := history.Save(path, rep, sha)
 	if err != nil {
 		a.toast("No se pudo guardar en el historial: " + err.Error())
 	}
+	pdb.RecordReport(rep)
 	return rep, entry, false, nil
 }
 
@@ -213,6 +304,7 @@ func (a *app) processQueue(paths []string, force bool) {
 	var shown *core.DemoReport
 	var shownMeta reportMeta
 	var failures []string
+	skipped := 0
 	for i, path := range paths {
 		label := "Analizando " + filepath.Base(path)
 		if len(paths) > 1 {
@@ -221,6 +313,10 @@ func (a *app) processQueue(paths []string, force bool) {
 		a.call("setProgress", 0, label)
 
 		rep, entry, cached, err := a.analyze(path, force, label)
+		if errors.Is(err, errSkipped) {
+			skipped++
+			continue
+		}
 		if err != nil {
 			failures = append(failures, filepath.Base(path)+": "+err.Error())
 			continue
@@ -245,7 +341,11 @@ func (a *app) processQueue(paths []string, force bool) {
 
 	if shown == nil {
 		a.call("restoreIdle")
-		a.toast("No se pudo analizar: " + strings.Join(failures, " · "))
+		if len(failures) > 0 {
+			a.toast("No se pudo analizar: " + strings.Join(failures, " · "))
+		} else if skipped > 0 {
+			a.toast("No se agregó ninguna demo: estaban repetidas")
+		}
 		return
 	}
 	a.show(shown, shownMeta)
@@ -253,6 +353,8 @@ func (a *app) processQueue(paths []string, force bool) {
 	switch {
 	case len(failures) > 0:
 		a.toast(fmt.Sprintf("%d demo(s) fallaron: %s", len(failures), strings.Join(failures, " · ")))
+	case len(paths) > 1 && skipped > 0:
+		a.toast(fmt.Sprintf("%d demos analizadas, %d salteadas por repetidas", len(paths)-skipped, skipped))
 	case len(paths) > 1:
 		a.toast(fmt.Sprintf("%d demos analizadas — están todas en el historial", len(paths)))
 	case shownMeta.FromCache:
@@ -383,15 +485,64 @@ func LaunchApp(initialDemoPath string) error {
 	})
 
 	_ = w.Bind("removeHistory", func(id string) error {
-		return history.Remove(id)
+		mid, err := history.Remove(id)
+		// Its players stop counting as seen in that match, unless a duplicate still holds it
+		if mid != "" && !history.MatchInUse(mid) {
+			db.GetDatabase().RemoveMatch(mid)
+		}
+		return err
 	})
 
-	_ = w.Bind("getPlayerProfile", func(steamID string) *db.PlayerProfile {
+	_ = w.Bind("answerPrompt", func(id, choice string) error {
+		if ch, ok := promptWaiters.Load(id); ok {
+			select {
+			case ch.(chan string) <- choice:
+			default:
+			}
+		}
+		return nil
+	})
+
+	_ = w.Bind("getOverview", func() history.Overview {
+		return history.GetOverview()
+	})
+
+	// listPlayers searches by name, or by SteamID in any common format
+	_ = w.Bind("listPlayers", func(query string) map[string]any {
+		if steamid.IsVanityURL(query) {
+			return map[string]any{"rows": []history.PlayerRow{}, "hint": "Los links con nombre (/id/...) no se pueden buscar sin conexión a Steam. Usá el link /profiles/ o el SteamID64."}
+		}
+		if id, ok := steamid.Parse(query); ok {
+			return map[string]any{"rows": history.ListPlayers("", strconv.FormatUint(id, 10)), "steamId": strconv.FormatUint(id, 10)}
+		}
+		return map[string]any{"rows": history.ListPlayers(query, "")}
+	})
+
+	_ = w.Bind("getPlayerDetail", func(steamID string) *history.PlayerDetail {
+		return history.GetPlayer(steamID)
+	})
+
+	_ = w.Bind("getFlagLevels", func() map[string]string {
+		out := map[string]string{}
+		for _, f := range core.KnownFlags() {
+			out[f] = core.FlagLevel(f)
+		}
+		return out
+	})
+
+	_ = w.Bind("listConfirmed", func() map[string]db.Confirmation {
+		return db.GetDatabase().Confirmations()
+	})
+
+	// setConfirmed is the staff decision after watching the demo; the app never sets it
+	_ = w.Bind("setConfirmed", func(steamID, name, note string, confirmed bool) error {
 		id, err := strconv.ParseUint(steamID, 10, 64)
 		if err != nil {
-			return nil
+			return err
 		}
-		return db.GetDatabase().GetProfile(id)
+		db.GetDatabase().SetConfirmed(id, name, note, confirmed)
+		applog.Printf("staff: %s (%s) confirmado=%v", name, steamID, confirmed)
+		return nil
 	})
 
 	_ = w.Bind("exportPlayerEvidence", func(steamID string) error {
