@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"golang.org/x/sys/windows/registry"
@@ -112,7 +113,9 @@ func FindCSGODirectory() (string, error) {
 }
 
 // LaunchInGame copies/links the demo into CS:GO's folder if needed, and launches +playdemo.
-func LaunchInGame(demoPath string, tick int) error {
+// LaunchInGame opens the demo in CS:GO at the given tick (demo ticks, so tickrate is
+// needed to turn the configured pre-roll seconds into ticks).
+func LaunchInGame(demoPath string, tick, tickrate int) error {
 	csgoDir, err := FindCSGODirectory()
 	if err != nil {
 		return err
@@ -125,7 +128,7 @@ func LaunchInGame(demoPath string, tick int) error {
 	if _, err := os.Stat(targetDemo); os.IsNotExist(err) {
 		// Try hardlink first (instant, 0 bytes extra disk space)
 		if errLink := os.Link(demoPath, targetDemo); errLink != nil {
-			// Fallback: copy file
+			// Fallback: copy file (hardlinks don't work across drives)
 			data, errRead := os.ReadFile(demoPath)
 			if errRead != nil {
 				return fmt.Errorf("error leyendo demo: %v", errRead)
@@ -136,29 +139,76 @@ func LaunchInGame(demoPath string, tick int) error {
 		}
 	}
 
+	if tickrate <= 0 {
+		tickrate = 64
+	}
 	cfg := LoadConfig()
-	prerollTicks := int(cfg.PrerollSeconds * 64.0)
-	if prerollTicks < 64 {
-		prerollTicks = 192
+	prerollTicks := int(cfg.PrerollSeconds * float64(tickrate))
+	if prerollTicks <= 0 {
+		prerollTicks = 3 * tickrate
 	}
 	preroll := tick - prerollTicks
-	if preroll < 128 {
-		preroll = 128
+	if preroll < 1 {
+		preroll = 1
 	}
 
 	nameNoExt := strings.TrimSuffix(baseName, filepath.Ext(baseName))
+	gameArgs := []string{"-novid", "+playdemo", nameNoExt, "+demo_gototick", fmt.Sprintf("%d", preroll)}
 
-	// Priority 1: Direct executable launch if csgo.exe exists in parent
-	parentDir := filepath.Dir(csgoDir)
-	csgoExe := filepath.Join(parentDir, "csgo.exe")
-	if info, err := os.Stat(csgoExe); err == nil && !info.IsDir() {
-		cmd := exec.Command(csgoExe, "-steam", "-novid", "+playdemo", nameNoExt, "+demo_gototick", fmt.Sprintf("%d", preroll))
-		cmd.Dir = parentDir
-		return cmd.Start()
+	// The game must be started by Steam: running csgo.exe directly fails with
+	// "Failed to connect with local Steam Client process". CS:GO Legacy is its own
+	// Steam app (4465480), not 730 (now CS2), so the app ID comes from Steam's manifest.
+	steamExe, appID := steamLaunchInfo(filepath.Dir(csgoDir))
+	if steamExe != "" {
+		return exec.Command(steamExe, append([]string{"-applaunch", appID}, gameArgs...)...).Start()
+	}
+	steamURL := fmt.Sprintf("steam://run/%s//%s", appID, strings.Join(gameArgs, " "))
+	return exec.Command("rundll32", "url.dll,FileProtocolHandler", steamURL).Start()
+}
+
+var acfField = regexp.MustCompile(`"(\w+)"\s+"([^"]*)"`)
+
+// steamLaunchInfo finds steam.exe and the Steam app ID of the game installed in
+// gameRoot (…\steamapps\common\<installdir>) by reading Steam's app manifests.
+func steamLaunchInfo(gameRoot string) (steamExe, appID string) {
+	installDir := filepath.Base(gameRoot)
+	steamapps := filepath.Dir(filepath.Dir(gameRoot))
+
+	manifests, _ := filepath.Glob(filepath.Join(steamapps, "appmanifest_*.acf"))
+	for _, m := range manifests {
+		data, err := os.ReadFile(m)
+		if err != nil {
+			continue
+		}
+		fields := map[string]string{}
+		for _, f := range acfField.FindAllStringSubmatch(string(data), 40) {
+			if _, seen := fields[f[1]]; !seen {
+				fields[f[1]] = f[2]
+			}
+		}
+		if strings.EqualFold(fields["installdir"], installDir) && fields["appid"] != "" {
+			appID = fields["appid"]
+			steamExe = strings.ReplaceAll(fields["LauncherPath"], `\\`, `\`) // .acf escapes backslashes
+			break
+		}
 	}
 
-	// Priority 2: Steam protocol URL
-	steamURL := fmt.Sprintf("steam://run/730//+playdemo %s +demo_gototick %d", nameNoExt, preroll)
-	cmd := exec.Command("rundll32", "url.dll,FileProtocolHandler", steamURL)
-	return cmd.Start()
+	if appID == "" {
+		appID = "730"
+		if strings.Contains(strings.ToLower(installDir), "legacy") {
+			appID = "4465480" // Counter-Strike: Global Offensive (legacy)
+		}
+	}
+	if steamExe == "" || !fileExists(steamExe) {
+		steamExe = ""
+		if p := filepath.Join(filepath.Dir(steamapps), "steam.exe"); fileExists(p) {
+			steamExe = p
+		}
+	}
+	return steamExe, appID
+}
+
+func fileExists(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && !st.IsDir()
 }

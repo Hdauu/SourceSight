@@ -680,11 +680,15 @@ func LaunchApp(initialDemoPath string) error {
 	})
 
 	_ = w.Bind("launchInGame", func(tick int) error {
-		_, dPath := current()
+		rep, dPath := current()
 		if dPath == "" {
 			return nil
 		}
-		if err := launcher.LaunchInGame(dPath, tick); err != nil {
+		tickrate := 0
+		if rep != nil {
+			tickrate = rep.Header.Tickrate
+		}
+		if err := launcher.LaunchInGame(dPath, tick, tickrate); err != nil {
 			a.toast("Error al abrir CS:GO: " + err.Error())
 			return nil
 		}
