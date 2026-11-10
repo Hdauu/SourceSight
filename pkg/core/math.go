@@ -2,6 +2,7 @@ package core
 
 import (
 	"math"
+	"sort"
 )
 
 type Vec3 struct {
@@ -158,4 +159,15 @@ func StdDev(vals []float64) float64 {
 		sumSq += diff * diff
 	}
 	return math.Sqrt(sumSq / float64(len(vals)-1))
+}
+
+// Median returns the middle value (upper median for even counts) without
+// modifying vals.
+func Median(vals []float64) float64 {
+	if len(vals) == 0 {
+		return 0
+	}
+	c := append([]float64(nil), vals...)
+	sort.Float64s(c)
+	return c[len(c)/2]
 }

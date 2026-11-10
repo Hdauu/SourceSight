@@ -20,6 +20,7 @@ var flagLevels = map[string]string{
 	"SOSPECHOSO-BHOP": LevelSuspect,
 	"ANTI-FLASH":      LevelSuspect,
 	"SMOKE-VISION":    LevelSuspect,
+	"PREFIRE":         LevelSuspect,
 
 	"AFK/GRIEF": LevelConduct,
 	"TEAMFLASH": LevelConduct,

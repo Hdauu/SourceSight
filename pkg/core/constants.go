@@ -61,3 +61,13 @@ const (
 	AfkRoundsThreshold     = 3
 	TeamflashThresholdSecs = 10.0
 )
+
+// Prefire: damage right after an enemy becomes visible to the shooter.
+// Calibrated on 13 demos: only a reported cheater crossed all three limits.
+const (
+	PrefireWindowMs       = 100.0  // faster than human visual reaction
+	PrefireMaxSightMs     = 2000.0 // damage later than this isn't a reaction to the peek
+	PrefireMinEngagements = 15
+	PrefireMinRatio       = 35.0 // % of engagements that are prefires
+	PrefireMaxMedianMs    = 150.0
+)

@@ -28,6 +28,7 @@ Corre en Windows, todo local. No sube nada a ningún lado.
 | Aimlock / spinbot | Giros de más de 45° en un solo tick | 5 o más dentro de un segundo, y al menos 10 en la partida |
 | Silent aim | Diferencia entre hacia dónde mira y dónde pega | 3 impactos con más de 35° de diferencia |
 | Wallhack | Seguir con la mira a un enemigo que no tiene a la vista | 1 s siguiéndolo con 20° de recorrido, 3 veces |
+| Prefire | Daño apenas el rival queda a la vista | 35% o más de sus peleas en menos de 100 ms, mediana menor a 150 ms, al menos 15 peleas (sospechoso) |
 | Macro | Ritmo de disparo de pistolas demasiado regular | Desvío menor a 1,5 ms en 10 disparos |
 | Kills cegado / por humo | Kills con flash total o a través de humo sin visión previa | 4 cegado o 5 por humo |
 | Admins | `!slay`, `sm_kick`, etc., y avisos `[SM]` del servidor | Castigar a quien lo mató hace menos de 5 s se marca como venganza |
@@ -40,7 +41,7 @@ Cada jugador recibe un nivel:
 | Nivel | Qué significa |
 |---|---|
 | **Cheat detectado** | Superó un umbral fuerte: autobunny, triggerbot, aimlock/spinbot, silent aim, wallhack o macro |
-| **Sospechoso** | Indicios más débiles que conviene mirar: bhop alto, kills cegado o a través de humo |
+| **Sospechoso** | Indicios más débiles que conviene mirar: bhop alto, prefire, kills cegado o a través de humo |
 | **Conducta** | No es cheat pero le importa al staff: AFK, flashes al propio equipo |
 | **Limpio** | No se encontró nada |
 | **Confirmado** | Lo marca un admin después de ver la demo, nunca la app. Queda guardado por SteamID |

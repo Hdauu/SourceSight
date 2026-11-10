@@ -766,7 +766,7 @@ const AppHTML = `<!DOCTYPE html>
                     <section class="panel" id="detectCard">
                         <div class="panel-head">
                             <div class="panel-title">Detecciones</div>
-                            <span class="muted">Triggerbot, aim, macro, flash y humo, wallhack</span>
+                            <span class="muted">Triggerbot, aim, prefire, macro, flash y humo, wallhack</span>
                         </div>
                         <div class="table-wrap">
                             <table>
@@ -778,6 +778,7 @@ const AppHTML = `<!DOCTYPE html>
                                         <th class="r">Macro</th>
                                         <th class="r">Cegado / humo</th>
                                         <th class="r">Wallhack</th>
+                                        <th class="r" title="Peleas donde hizo daño a menos de 100 ms de que el rival quedara a la vista">Prefire</th>
                                         <th class="r">Resultado</th>
                                     </tr>
                                 </thead>
@@ -1458,6 +1459,7 @@ const AppHTML = `<!DOCTYPE html>
                     '<div class="table-wrap"><table class="compare"><thead><tr><th></th><th class="r">Este jugador</th><th class="r">Promedio general</th></tr></thead><tbody>' +
                         compareRow('Perfs de bhop', a.perfRatio, g.perfRatio, '%', true, true) +
                         compareRow('Reacción (triggerbot)', a.reactionMs, g.reactionMs, ' ms', false) +
+                        compareRow('Prefire: daño apenas aparece el rival', a.prefirePct, g.prefirePct, '%', true, true) +
                         compareRow('Snaps por demo', a.snapsPerDemo, g.snapsPerDemo, '', true) +
                         compareRow('Silent aim por demo', a.silentPerDemo, g.silentPerDemo, '', true) +
                         compareRow('Wallhack por demo', a.wallPerDemo, g.wallPerDemo, '', true) +
@@ -1556,7 +1558,7 @@ const AppHTML = `<!DOCTYPE html>
                 (confirmationOf(p) || p.flags.some(f => f !== 'AUTOBUNNY' && f !== 'SOSPECHOSO-BHOP')));
             const body = document.getElementById('detectBody');
             if (rows.length === 0) {
-                body.innerHTML = emptyRow(7, 'Nadie superó los umbrales de triggerbot, aimlock, silent aim, macro, wallhack, kills cegado ni humo.');
+                body.innerHTML = emptyRow(8, 'Nadie superó los umbrales de triggerbot, aimlock, silent aim, macro, wallhack, prefire, kills cegado ni humo.');
                 return;
             }
             body.innerHTML = '';
@@ -1572,6 +1574,7 @@ const AppHTML = `<!DOCTYPE html>
                     '<td class="r">' + (p.macroHits || '<span class="muted">–</span>') + '</td>' +
                     '<td class="r">' + p.flashKills + ' / ' + p.smokeKills + '</td>' +
                     '<td class="r">' + (p.wallTrackCount || '<span class="muted">–</span>') + '</td>' +
+                    '<td class="r' + ((p.flags || []).includes('PREFIRE') ? ' t-red' : '') + '">' + (p.peekEngagements ? p.prefireRatio + '%' : '<span class="muted">–</span>') + '</td>' +
                     '<td class="r">' + resultCell(p) + '</td>';
                 body.appendChild(tr);
             });
@@ -1711,7 +1714,7 @@ const AppHTML = `<!DOCTYPE html>
                 stat('Kills por humo', p.smokeKills || 0, p.smokeKills > 0 ? 't-yellow' : '') +
                 stat('Teamflash', (p.teamflashSecs || 0).toFixed(1) + ' s', p.teamflashSecs >= 35 ? 't-yellow' : '') +
                 stat('AFK', p.isAfk ? 'Sí' : 'No', p.isAfk ? 't-yellow' : '') +
-                stat('Mensajes', (p.chatMessages || []).length) +
+                stat('Prefire', p.peekEngagements ? p.prefireRatio + '% de ' + p.peekEngagements : '–', (p.flags || []).includes('PREFIRE') ? 't-red' : (p.prefireRatio >= 30 && p.peekEngagements >= 10 ? 't-yellow' : '')) +
                 '</div></div>';
 
             const incs = p.incidents || [];

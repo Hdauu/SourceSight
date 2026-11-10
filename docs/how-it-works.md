@@ -28,6 +28,12 @@ When a shot deals damage, the shooter's view direction is compared with the actu
 
 The demo records which enemies each player has "spotted" (the same data that feeds the radar). It looks for the crosshair following an enemy that is **not** spotted, within 4° of their chest, for at least one second, travelling 20° or more. The travel is what matters: holding the crosshair still on an angle where someone is about to peek is good crosshair placement, not a wallhack. It flags after 3 such tracks.
 
+## Prefire (`pkg/modules/peek.go`)
+
+For every fight it measures how long the player takes to deal damage after the enemy becomes visible to them, using the same "spotted" data that feeds the radar. A person needs about 200–400 ms to react; damaging in under 100 ms again and again suggests they already knew where the enemy would appear (wallhack) or a triggerbot. It is flagged as **suspicious** with 35% or more of fights under 100 ms, a median under 150 ms and at least 15 fights.
+
+It was calibrated on 13 real demos: it only flagged a player reported as a cheater. The player page compares their average prefire across all demos with everyone else's, because the pattern shows best over several matches.
+
 ## Macro (`pkg/modules/macro.go`)
 
 For semi-automatic pistols it measures the interval between shots. A finger has natural variation; a macro fires at an almost constant rhythm. It flags when the deviation between shots is under 1.5 ms, measured over at least 10.

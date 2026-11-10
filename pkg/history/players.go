@@ -48,6 +48,9 @@ type Averages struct {
 	SilentPerDemo  float64  `json:"silentPerDemo"`
 	WallPerDemo    float64  `json:"wallPerDemo"`
 	IncidentsPerDm float64  `json:"incidentsPerDemo"`
+	// PrefirePct: share of engagements damaged within 100 ms of the enemy becoming visible
+	PrefirePct  *float64 `json:"prefirePct,omitempty"`
+	Engagements int      `json:"engagements"`
 }
 
 // PlayerDetail aggregates one player across every stored demo.
@@ -96,6 +99,7 @@ type accum struct {
 	reactSum                       float64
 	reactSamples                   int
 	snaps, silent, wall, incidents int
+	engagements, prefires          int
 }
 
 func (a *accum) add(s PlayerSummary) {
@@ -112,6 +116,8 @@ func (a *accum) add(s PlayerSummary) {
 	a.silent += s.SilentCount
 	a.wall += s.WallTrackCount
 	a.incidents += s.Incidents
+	a.engagements += s.PeekEngagements
+	a.prefires += s.Prefires
 }
 
 func (a *accum) averages() Averages {
@@ -123,6 +129,11 @@ func (a *accum) averages() Averages {
 	if a.reactSamples > 0 {
 		v := math.Round(a.reactSum / float64(a.reactSamples))
 		out.ReactionMs = &v
+	}
+	out.Engagements = a.engagements
+	if a.engagements > 0 {
+		v := round1(100 * float64(a.prefires) / float64(a.engagements))
+		out.PrefirePct = &v
 	}
 	if a.demos > 0 {
 		d := float64(a.demos)

@@ -28,6 +28,12 @@ Cuando un disparo hace daño se compara hacia dónde miraba el tirador con la di
 
 La demo guarda qué enemigos tiene "vistos" cada jugador (el mismo dato que alimenta el radar). Se busca que la mira siga a un enemigo que **no** está visto, a menos de 4° de su pecho, durante al menos un segundo, recorriendo 20° o más. El recorrido es lo importante: dejar la mira quieta en un ángulo por donde va a salir alguien es buena colocación, no wallhack. Se marca con 3 seguimientos.
 
+## Prefire (`pkg/modules/peek.go`)
+
+Para cada pelea se mide cuánto tarda el jugador en hacer daño desde que el rival queda a la vista para él, usando el mismo dato de "visto" que el radar. Una persona necesita unos 200–400 ms para reaccionar; dañar en menos de 100 ms una y otra vez sugiere que ya sabía dónde iba a aparecer (wallhack) o un triggerbot. Se marca como **sospechoso** con 35% o más de peleas por debajo de 100 ms, mediana menor a 150 ms y al menos 15 peleas.
+
+Se calibró con 13 demos reales: solo marcó a un jugador reportado como cheater. En la ficha del jugador se compara su prefire promedio de todas las demos con el de todos los demás, porque el patrón se ve mejor a lo largo de varias partidas.
+
 ## Macro (`pkg/modules/macro.go`)
 
 Para pistolas semiautomáticas se mide el intervalo entre disparos. Un dedo tiene variación natural; un macro dispara con un ritmo casi constante. Se marca con un desvío menor a 1,5 ms entre disparos, medido sobre al menos 10.

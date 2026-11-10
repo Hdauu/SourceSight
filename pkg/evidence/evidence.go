@@ -176,6 +176,7 @@ var tmpl = template.Must(template.New("evidence").Funcs(template.FuncMap{
     <div class="stat"><b>{{.Player.WallTrackCount}}</b><span>seguimientos tras pared</span></div>
     <div class="stat"><b>{{.Player.FlashKills}} / {{.Player.SmokeKills}}</b><span>kills cegado / por humo</span></div>
     <div class="stat"><b>{{.Player.MacroHits}}</b><span>series de macro</span></div>
+    <div class="stat"><b>{{if .Player.PeekEngagements}}{{printf "%.1f" .Player.PrefireRatio}}%{{else}}—{{end}}</b><span>prefire: daño a menos de 100 ms de ver al rival ({{.Player.Prefires}} de {{.Player.PeekEngagements}} peleas)</span></div>
   </div>
 
   {{if .ByType}}

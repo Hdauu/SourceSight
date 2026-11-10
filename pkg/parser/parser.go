@@ -99,6 +99,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		}
 		recentDeaths = kept
 		for _, st := range states {
+			modules.ResetPeekRound(st)
 			st.Aim.PrevPitch = nil
 			st.Aim.PrevYaw = nil
 			st.Aim.AliveTicks = 0
@@ -185,6 +186,9 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 					victimVec,
 					e.Player.Name, e.HealthDamage,
 				)
+				if e.Attacker.Team != e.Player.Team {
+					modules.RegisterPeekDamage(ast, e.Player.SteamID64, e.Player.Name, tick, tickrate)
+				}
 			}
 		}
 	})
@@ -415,6 +419,25 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 			playersByName[cp.pl.Name] = cp.pl
 		}
 
+		// Prefire: who sees whom. One spotted-mask read per player per tick, then bit checks.
+		masks := make([]uint64, len(alivePlayers))
+		maskOK := make([]bool, len(alivePlayers))
+		for i, cp := range alivePlayers {
+			masks[i], maskOK[i] = spottedMask(cp.pl)
+		}
+		for _, a := range alivePlayers {
+			if a.st.SteamID == 0 || a.pl.EntityID <= 0 {
+				continue
+			}
+			bit := uint(a.pl.EntityID - 1)
+			for j, v := range alivePlayers {
+				if v.pl.Team == a.pl.Team || !maskOK[j] || v.pl.SteamID64 == 0 {
+					continue
+				}
+				modules.UpdatePeekVisibility(a.st, v.pl.SteamID64, masks[j]&(1<<bit) != 0, tick)
+			}
+		}
+
 		// Run detection modules
 		for _, cp := range alivePlayers {
 			st := cp.st
@@ -567,4 +590,26 @@ func isDuplicateAdminEvent(log []core.AdminEvent, admin, cmd string, tick int) b
 		}
 	}
 	return false
+}
+
+// spottedMask returns the bitmask of players (by EntityID-1) that currently see pl.
+// CS:GO splits it in two 32-bit netprops; ok is false when the demo lacks them.
+func spottedMask(pl *common.Player) (mask uint64, ok bool) {
+	defer func() {
+		if recover() != nil {
+			mask, ok = 0, false
+		}
+	}()
+	if pl.Entity == nil {
+		return 0, false
+	}
+	lo := pl.Entity.Property("m_bSpottedByMask.000")
+	if lo == nil {
+		return 0, false
+	}
+	mask = uint64(uint32(lo.Value().IntVal))
+	if hi := pl.Entity.Property("m_bSpottedByMask.001"); hi != nil {
+		mask |= uint64(uint32(hi.Value().IntVal)) << 32
+	}
+	return mask, true
 }

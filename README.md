@@ -28,6 +28,7 @@ Runs on Windows, fully local. Nothing is uploaded anywhere.
 | Aimlock / spinbot | Turns of more than 45° in a single tick | 5 or more within one second, and at least 10 per match |
 | Silent aim | Gap between where the player looks and where the hit lands | 3 hits more than 35° off |
 | Wallhack | Tracking an enemy the player cannot see | 1 s of tracking with 20° of travel, 3 times |
+| Prefire | Damage dealt right after an enemy becomes visible to the player | 35% or more of their fights under 100 ms, median under 150 ms, at least 15 fights (suspicious) |
 | Macro | Pistol fire rhythm that is too regular | Deviation under 1.5 ms over 10 shots |
 | Blind / smoke kills | Kills while fully flashed or through smoke without prior sight | 4 blind or 5 through smoke |
 | Admins | `!slay`, `sm_kick`, etc., and `[SM]` server notices | Punishing whoever killed the admin less than 5 s earlier is flagged as revenge |
@@ -40,7 +41,7 @@ Every player gets a level:
 | Level | Meaning |
 |---|---|
 | **Cheat detected** | Crossed a strong threshold: autobunny, triggerbot, aimlock/spinbot, silent aim, wallhack or macro |
-| **Suspicious** | Weaker signs worth a look: high bhop, blind or through-smoke kills |
+| **Suspicious** | Weaker signs worth a look: high bhop, prefire, blind or through-smoke kills |
 | **Conduct** | Not cheating, but relevant to staff: AFK, team-flashing |
 | **Clean** | Nothing found |
 | **Confirmed** | Set by a staff member after watching the demo, never by the app. Saved per SteamID |

@@ -90,6 +90,18 @@ type WallhackData struct {
 	Incidents     []TimelineIncident
 }
 
+// PeekData tracks how fast a player damages enemies right after they become visible
+// to them. Hitting someone before a human could react suggests knowing they were there.
+type PeekData struct {
+	VisibleSince map[uint64]int  // enemy SteamID -> tick they became visible
+	Visible      map[uint64]bool // enemy SteamID -> visible last tick (absent = not seen yet)
+	Damaged      map[uint64]bool // already damaged during this sighting
+	Engagements  int
+	Prefires     int
+	ReactionsMs  []float64
+	Incidents    []TimelineIncident
+}
+
 type PlayerState struct {
 	Name          string
 	SteamID       uint64
@@ -115,6 +127,7 @@ type PlayerState struct {
 	Ghost      GhostData
 	Grief      GriefData
 	Wallhack   WallhackData
+	Peek       PeekData
 }
 
 func NewPlayerState(name string, steamID uint64) *PlayerState {
@@ -123,6 +136,11 @@ func NewPlayerState(name string, steamID uint64) *PlayerState {
 		SteamID: steamID,
 		Bhop: BhopData{
 			WasOnGround: true,
+		},
+		Peek: PeekData{
+			VisibleSince: map[uint64]int{},
+			Visible:      map[uint64]bool{},
+			Damaged:      map[uint64]bool{},
 		},
 	}
 }
@@ -150,6 +168,10 @@ type PlayerStats struct {
 	TeamflashSecs       float64            `json:"teamflashSecs"`
 	GhostingCount       int                `json:"ghostingCount"`
 	WallTrackCount      int                `json:"wallTrackCount"`
+	PeekEngagements     int                `json:"peekEngagements"`
+	Prefires            int                `json:"prefires"`
+	PrefireRatio        float64            `json:"prefireRatio"`
+	PeekReactionMs      *int               `json:"peekReactionMs"` // median, from becoming visible to first damage
 	PreviousInfractions int                `json:"previousInfractions"`
 	PreviousNames       []string           `json:"previousNames"`
 	ChatMessages        []ChatMessageEntry `json:"chatMessages"`
@@ -227,6 +249,20 @@ func (ps *PlayerState) ComputeStats(tickrate int) PlayerStats {
 		flags = append(flags, "GHOSTING")
 	}
 
+	// Prefire: damaging enemies faster than a human reacts once they become visible
+	var peekMedian *int
+	prefireRatio := 0.0
+	if n := ps.Peek.Engagements; n > 0 {
+		m := int(math.Round(Median(ps.Peek.ReactionsMs)))
+		peekMedian = &m
+		prefireRatio = 100 * float64(ps.Peek.Prefires) / float64(n)
+	}
+	prefireFlag := ps.Peek.Engagements >= PrefireMinEngagements &&
+		prefireRatio >= PrefireMinRatio && *peekMedian <= int(PrefireMaxMedianMs)
+	if prefireFlag {
+		flags = append(flags, "PREFIRE")
+	}
+
 	// Module W: Wallhack / Occluded ESP Tracking
 	if ps.Wallhack.IncidentCount >= 3 {
 		flags = append(flags, "WALLHACK")
@@ -274,6 +310,9 @@ func (ps *PlayerState) ComputeStats(tickrate int) PlayerStats {
 	incs = append(incs, ps.Macro.Incidents...)
 	incs = append(incs, ps.Ghost.Incidents...)
 	incs = append(incs, ps.Wallhack.Incidents...)
+	if prefireFlag {
+		incs = append(incs, ps.Peek.Incidents...)
+	}
 
 	// Pre-roll calculation for timeline gotoCmd
 	for i := range incs {
@@ -287,33 +326,37 @@ func (ps *PlayerState) ComputeStats(tickrate int) PlayerStats {
 	}
 
 	return PlayerStats{
-		Name:           ps.Name,
-		SteamID:        ps.SteamID,
-		TotalJumps:     ps.Bhop.TotalJumps,
-		PerfectHops:    ps.Bhop.PerfectHops,
-		PerfRatio:      perfRatio,
-		TotalPresses:   ps.Bhop.TotalPresses,
-		OneTickHops:    ps.Bhop.OneTickHops,
-		OneTickRatio:   oneTickRatio,
-		MaxStreak:      ps.Bhop.MaxStreak,
-		MaxSpeed:       int(math.Round(ps.Bhop.MaxSpeed)),
-		BhopVerdict:    bhopVerdict,
-		TriggerAvgMs:   trigAvg,
-		TriggerSigma:   trigSig,
-		TriggerSamples: trigSamples,
-		SnapCount:      len(ps.Aim.SnapEvents),
-		SilentCount:    len(ps.Aim.SilentEvents),
-		MacroHits:      len(ps.Macro.Incidents),
-		FlashKills:     len(ps.FlashSmoke.BlindKills),
-		SmokeKills:     len(ps.FlashSmoke.SmokeKills),
-		TeamflashSecs:  math.Round(ps.Grief.TeamflashSecs*10) / 10,
-		GhostingCount:  len(ps.Ghost.Incidents),
-		WallTrackCount: ps.Wallhack.IncidentCount,
-		IsAfk:          isAfk,
-		Flags:          flags,
-		Verdict:        verdict,
-		Level:          LevelOf(flags),
-		Incidents:      incs,
+		Name:            ps.Name,
+		SteamID:         ps.SteamID,
+		TotalJumps:      ps.Bhop.TotalJumps,
+		PerfectHops:     ps.Bhop.PerfectHops,
+		PerfRatio:       perfRatio,
+		TotalPresses:    ps.Bhop.TotalPresses,
+		OneTickHops:     ps.Bhop.OneTickHops,
+		OneTickRatio:    oneTickRatio,
+		MaxStreak:       ps.Bhop.MaxStreak,
+		MaxSpeed:        int(math.Round(ps.Bhop.MaxSpeed)),
+		BhopVerdict:     bhopVerdict,
+		TriggerAvgMs:    trigAvg,
+		TriggerSigma:    trigSig,
+		TriggerSamples:  trigSamples,
+		SnapCount:       len(ps.Aim.SnapEvents),
+		SilentCount:     len(ps.Aim.SilentEvents),
+		MacroHits:       len(ps.Macro.Incidents),
+		FlashKills:      len(ps.FlashSmoke.BlindKills),
+		SmokeKills:      len(ps.FlashSmoke.SmokeKills),
+		TeamflashSecs:   math.Round(ps.Grief.TeamflashSecs*10) / 10,
+		GhostingCount:   len(ps.Ghost.Incidents),
+		WallTrackCount:  ps.Wallhack.IncidentCount,
+		PeekEngagements: ps.Peek.Engagements,
+		Prefires:        ps.Peek.Prefires,
+		PrefireRatio:    math.Round(prefireRatio*10) / 10,
+		PeekReactionMs:  peekMedian,
+		IsAfk:           isAfk,
+		Flags:           flags,
+		Verdict:         verdict,
+		Level:           LevelOf(flags),
+		Incidents:       incs,
 	}
 }
 

@@ -128,10 +128,10 @@ func playerEmbed(rep *core.DemoReport, p core.PlayerStats) *discordgo.MessageEmb
 		reaction = fmt.Sprintf("%d ms", *p.TriggerAvgMs)
 	}
 	metrics := fmt.Sprintf(
-		"Perfs `%.1f%%` (%d/%d) · racha `%d`\nSnaps `%d` · silent `%d` · wallhack `%d`\nReacción `%s` · macro `%d` · cegado/humo `%d/%d`",
+		"Perfs `%.1f%%` (%d/%d) · racha `%d`\nSnaps `%d` · silent `%d` · wallhack `%d`\nReacción `%s` · prefire `%.0f%%` · macro `%d` · cegado/humo `%d/%d`",
 		p.PerfRatio, p.PerfectHops, p.TotalJumps, p.MaxStreak,
 		p.SnapCount, p.SilentCount, p.WallTrackCount,
-		reaction, p.MacroHits, p.FlashKills, p.SmokeKills,
+		reaction, p.PrefireRatio, p.MacroHits, p.FlashKills, p.SmokeKills,
 	)
 
 	var lines []string
