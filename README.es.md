@@ -41,11 +41,11 @@ Los resultados son **indicios, no pruebas**. Cada incidente trae su comando `dem
 2. Ejecutalo. Se instala solo para tu usuario, sin pedir permisos de administrador.
 3. Puede aparecer *"Windows protegió su PC"* porque el instalador no está firmado. Hacé click en **Más información → Ejecutar de todas formas**.
 
-¿Preferís no instalar? En la misma versión está el `portable.zip`: descomprimilo y abrí `SourceSight.exe`.
+¿Solo necesitás el bot de Discord? En la misma versión está `SourceSightBot.exe` suelto, sin instalar nada.
 
 Necesita el runtime de WebView2, que ya viene con Windows 10 y 11.
 
-**Actualizaciones:** al abrirse, la app consulta si hay una versión nueva en GitHub y ofrece instalarla con un click. El ejecutable descargado se verifica contra el SHA-256 que publica GitHub.
+**Actualizaciones:** al abrirse, la app consulta si hay una versión nueva en GitHub y ofrece instalarla con un click. Baja el instalador, lo verifica contra el SHA-256 que publica GitHub, actualiza la app, el CLI y el bot, y vuelve a abrir SourceSight.
 
 ## Uso
 
@@ -87,7 +87,7 @@ git tag v2.1.0
 git push origin v2.1.0
 ```
 
-GitHub Actions compila los ejecutables, el instalador y el zip, y publica la versión. Las copias instaladas la ven la próxima vez que se abren.
+GitHub Actions arma el instalador y el bot suelto y publica la versión. Las copias instaladas la ven la próxima vez que se abren.
 
 ## Cómo funciona
 

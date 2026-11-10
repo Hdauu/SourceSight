@@ -41,11 +41,11 @@ Results are **leads, not proof**. Each incident includes its `demo_gototick` com
 2. Run it. It installs for your user only, no administrator rights needed.
 3. Windows may show *"Windows protected your PC"* because the installer isn't code-signed. Click **More info → Run anyway**.
 
-Prefer not to install? Grab the `portable.zip` from the same release and run `SourceSight.exe`.
+Only need the Discord bot? The release also has `SourceSightBot.exe` on its own, no install required.
 
 Requires the WebView2 runtime, which ships with Windows 10 and 11.
 
-**Updates:** on launch the app checks GitHub for a new version and offers to install it with one click. The download is verified against the SHA-256 published by GitHub.
+**Updates:** on launch the app checks GitHub for a new version and offers to install it with one click. It downloads the installer, checks it against the SHA-256 published by GitHub, updates the app, CLI and bot, and reopens SourceSight.
 
 ## Usage
 
@@ -87,7 +87,7 @@ git tag v2.1.0
 git push origin v2.1.0
 ```
 
-GitHub Actions builds the executables, the installer and the zip, and publishes the release. Installed copies see it next time they open.
+GitHub Actions builds the installer and the standalone bot and publishes the release. Installed copies see it next time they open.
 
 ## How it works
 

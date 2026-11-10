@@ -1,6 +1,6 @@
 # Publishes a version: git tag v2.1.0 && git push origin v2.1.0
-# Builds the three executables with the embedded icon, the installer and a zip,
-# then creates the GitHub Release. Installed copies pick it up on launch (pkg/update).
+# Builds the executables with the embedded icon and the installer, then creates the
+# GitHub Release with the installer and the standalone bot. Installed copies pick it up on launch (pkg/update).
 name: Release
 
 on:
@@ -47,17 +47,14 @@ jobs:
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$v" "/DDist=..\dist" installer\SourceSight.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Zip
-        shell: bash
-        run: (cd dist && 7z a "../SourceSight-${GITHUB_REF_NAME}-portable.zip" .)
-
       - name: Publish
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Only the installer (app + CLI + bot) and the standalone bot are published.
+          # In-app updates download the installer and run it silently.
           gh release create "$GITHUB_REF_NAME" \
             "SourceSight-Setup-${GITHUB_REF_NAME}.exe" \
-            "SourceSight-${GITHUB_REF_NAME}-portable.zip" \
-            dist/SourceSight.exe dist/SourceSightCLI.exe dist/SourceSightBot.exe \
+            dist/SourceSightBot.exe \
             --title "SourceSight $GITHUB_REF_NAME" --generate-notes

@@ -66,3 +66,5 @@ Root: HKCU; Subkey: "Software\Classes\SourceSight.dem\shell\open\command"; Value
 
 [Run]
 Filename: "{app}\SourceSight.exe"; Description: "{cm:LaunchProgram,SourceSight}"; Flags: nowait postinstall skipifsilent
+; In-app updates run this installer with /VERYSILENT: reopen the app when it's done
+Filename: "{app}\SourceSight.exe"; Flags: nowait; Check: WizardSilent

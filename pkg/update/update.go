@@ -1,6 +1,6 @@
-// Package update checks GitHub Releases for a newer build and swaps the running
-// executable in place. Windows lets a running .exe be renamed but not overwritten,
-// so the old binary is moved aside to "<exe>.old" and removed on the next launch.
+// Package update checks GitHub Releases for a newer build and installs it by running
+// the release's installer silently. The installer closes the running app, replaces
+// every executable (app, CLI and bot) and relaunches SourceSight.
 package update
 
 import (
@@ -19,6 +19,9 @@ import (
 
 	"sourcesight/pkg/version"
 )
+
+// installerPrefix matches release assets like "SourceSight-Setup-v2.1.2.exe".
+const installerPrefix = "sourcesight-setup-"
 
 type Release struct {
 	Version  string `json:"version"`
@@ -42,11 +45,22 @@ type ghRelease struct {
 
 var client = &http.Client{Timeout: 15 * time.Second}
 
-// CleanupOld removes the binary left behind by a previous update.
+// CleanupOld removes leftovers from the pre-installer update mechanism (v2.1.0/v2.1.1).
 func CleanupOld() {
 	if exe, err := os.Executable(); err == nil {
 		_ = os.Remove(exe + ".old")
 	}
+}
+
+// Installed reports whether this copy was set up by the installer, which leaves its
+// uninstaller next to the executable. Only installed copies can update themselves.
+func Installed() bool {
+	exe, err := os.Executable()
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(filepath.Dir(exe), "unins000.exe"))
+	return err == nil
 }
 
 // Check returns the latest release when it is newer than this build, or nil.
@@ -78,34 +92,34 @@ func Check() (*Release, error) {
 	}
 
 	rel := &Release{Version: gh.TagName, Notes: gh.Body, PageURL: gh.HTMLURL}
-	if exe, err := os.Executable(); err == nil {
-		want := strings.ToLower(filepath.Base(exe))
-		for _, a := range gh.Assets {
-			if strings.ToLower(a.Name) == want {
-				rel.assetURL = a.BrowserDownloadURL
-				rel.digest = strings.TrimPrefix(a.Digest, "sha256:")
-			}
+	for _, a := range gh.Assets {
+		name := strings.ToLower(a.Name)
+		if strings.HasPrefix(name, installerPrefix) && strings.HasSuffix(name, ".exe") {
+			rel.assetURL = a.BrowserDownloadURL
+			rel.digest = strings.TrimPrefix(a.Digest, "sha256:")
 		}
 	}
 	return rel, nil
 }
 
-// CanApply reports whether the release ships a binary matching this executable.
+// CanApply reports whether the update can be installed from inside the app.
 func (r *Release) CanApply() bool {
-	return r.assetURL != ""
+	return r.assetURL != "" && Installed()
 }
 
-// Apply downloads the new binary, verifies its SHA-256 when GitHub publishes one,
-// swaps it in and relaunches. The caller should exit right after it returns nil.
+// Apply downloads the installer, verifies its SHA-256 when GitHub publishes one and
+// starts it silently. The installer closes this process and relaunches the new version,
+// so the caller should exit right after Apply returns nil.
 func (r *Release) Apply() error {
 	if r.assetURL == "" {
-		return fmt.Errorf("la versión %s no incluye un ejecutable para este programa", r.Version)
+		return fmt.Errorf("la versión %s no incluye instalador", r.Version)
 	}
-	exe, err := os.Executable()
+
+	dir, err := os.MkdirTemp("", "sourcesight-update-")
 	if err != nil {
 		return err
 	}
-	tmp := exe + ".new"
+	setup := filepath.Join(dir, "SourceSight-Setup-"+r.Version+".exe")
 
 	resp, err := (&http.Client{Timeout: 10 * time.Minute}).Get(r.assetURL)
 	if err != nil {
@@ -116,7 +130,7 @@ func (r *Release) Apply() error {
 		return fmt.Errorf("descarga fallida: %s", resp.Status)
 	}
 
-	f, err := os.Create(tmp)
+	f, err := os.Create(setup)
 	if err != nil {
 		return err
 	}
@@ -124,25 +138,15 @@ func (r *Release) Apply() error {
 	_, err = io.Copy(io.MultiWriter(f, h), resp.Body)
 	f.Close()
 	if err != nil {
-		os.Remove(tmp)
+		os.RemoveAll(dir)
 		return err
 	}
 	if r.digest != "" && !strings.EqualFold(hex.EncodeToString(h.Sum(nil)), r.digest) {
-		os.Remove(tmp)
-		return fmt.Errorf("el archivo descargado no coincide con el hash publicado; actualización cancelada")
+		os.RemoveAll(dir)
+		return fmt.Errorf("el instalador descargado no coincide con el hash publicado; actualización cancelada")
 	}
 
-	old := exe + ".old"
-	_ = os.Remove(old)
-	if err := os.Rename(exe, old); err != nil {
-		os.Remove(tmp)
-		return err
-	}
-	if err := os.Rename(tmp, exe); err != nil {
-		_ = os.Rename(old, exe) // roll back
-		return err
-	}
-	return exec.Command(exe).Start()
+	return exec.Command(setup, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS").Start()
 }
 
 // newer compares "vMAJOR.MINOR.PATCH" tags numerically.
