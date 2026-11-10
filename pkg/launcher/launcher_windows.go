@@ -113,30 +113,17 @@ func FindCSGODirectory() (string, error) {
 }
 
 // LaunchInGame copies/links the demo into CS:GO's folder if needed, and launches +playdemo.
-// LaunchInGame opens the demo in CS:GO at the given tick (demo ticks, so tickrate is
-// needed to turn the configured pre-roll seconds into ticks).
+// LaunchInGame shows the demo in CS:GO at the given tick (demo ticks; tickrate turns
+// the configured pre-roll seconds into ticks). An open game started by SourceSight is
+// reused through its remote console; otherwise the game is started through Steam.
 func LaunchInGame(demoPath string, tick, tickrate int) error {
 	csgoDir, err := FindCSGODirectory()
 	if err != nil {
 		return err
 	}
-
-	baseName := filepath.Base(demoPath)
-	targetDemo := filepath.Join(csgoDir, baseName)
-
-	// If demo is not already inside csgoDir, link or copy it
-	if _, err := os.Stat(targetDemo); os.IsNotExist(err) {
-		// Try hardlink first (instant, 0 bytes extra disk space)
-		if errLink := os.Link(demoPath, targetDemo); errLink != nil {
-			// Fallback: copy file (hardlinks don't work across drives)
-			data, errRead := os.ReadFile(demoPath)
-			if errRead != nil {
-				return fmt.Errorf("error leyendo demo: %v", errRead)
-			}
-			if errWrite := os.WriteFile(targetDemo, data, 0644); errWrite != nil {
-				return fmt.Errorf("error copiando demo a csgo: %v", errWrite)
-			}
-		}
+	ref, err := demoRef(csgoDir, demoPath)
+	if err != nil {
+		return err
 	}
 
 	if tickrate <= 0 {
@@ -147,13 +134,20 @@ func LaunchInGame(demoPath string, tick, tickrate int) error {
 	if prerollTicks <= 0 {
 		prerollTicks = 3 * tickrate
 	}
-	preroll := tick - prerollTicks
-	if preroll < 1 {
-		preroll = 1
+	preroll := max(tick-prerollTicks, 1)
+
+	if sendToRunningGame(ref, preroll) {
+		return nil
+	}
+	if gameRunning() {
+		return ErrGameWithoutConsole
 	}
 
-	nameNoExt := strings.TrimSuffix(baseName, filepath.Ext(baseName))
-	gameArgs := []string{"-novid", "+playdemo", nameNoExt, "+demo_gototick", fmt.Sprintf("%d", preroll)}
+	consoleMu.Lock()
+	lastPlayed = ref
+	consoleMu.Unlock()
+	gameArgs := []string{"-novid", "-netconport", fmt.Sprint(NetconPort),
+		"+playdemo", ref, "+demo_gototick", fmt.Sprint(preroll)}
 
 	// The game must be started by Steam: running csgo.exe directly fails with
 	// "Failed to connect with local Steam Client process". CS:GO Legacy is its own
