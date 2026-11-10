@@ -221,6 +221,18 @@ const AppHTML = `<!DOCTYPE html>
         .aside-resizer:focus-visible { outline: none; }
         body.resizing { cursor: col-resize; user-select: none; }
         .aside-hint { font-size: 11.5px; color: var(--muted); }
+        .aside-notice {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px 10px;
+            border: 1px solid rgba(224, 123, 42, 0.35);
+            background: var(--accent-soft);
+            border-radius: var(--r);
+            font-size: 12px;
+            color: var(--text-2);
+        }
+        .aside-notice .btn { align-self: flex-start; height: 26px; }
         .aside-hint:empty { display: none; }
 
         /* Player page & overview */
@@ -670,6 +682,10 @@ const AppHTML = `<!DOCTYPE html>
                     <select class="input" id="histCategory" onchange="renderHistory()" aria-label="Categoría">
                         <option value="">Todas las categorías</option>
                     </select>
+                    <div class="aside-notice" id="outdatedNotice" style="display:none;">
+                        <span id="outdatedText"></span>
+                        <button class="btn" onclick="runReanalyzeOutdated()">Re-analizar</button>
+                    </div>
                 </div>
                 <div class="hist-list" id="histList"></div>
             </div>
@@ -1269,6 +1285,12 @@ const AppHTML = `<!DOCTYPE html>
             const catSel = document.getElementById('histCategory');
             document.getElementById('histCount').innerText = historyItems.length || '';
 
+            // Demos analyzed by older detectors miss newer detections (e.g. prefire)
+            const analysisVer = Number(appInfo.analysisVersion || 0);
+            const outdated = analysisVer ? historyItems.filter(e => (e.analysisVersion || 0) < analysisVer).length : 0;
+            document.getElementById('outdatedNotice').style.display = outdated ? 'flex' : 'none';
+            document.getElementById('outdatedText').innerText = outdated + (outdated === 1 ? ' demo se analizó' : ' demos se analizaron') + ' con una versión anterior y no tienen las detecciones nuevas.';
+
             // Category options come from what is actually in the history
             const cats = [...new Set(historyItems.flatMap(e => e.flagTypes || []))].sort();
             const current = catSel.value;
@@ -1307,6 +1329,10 @@ const AppHTML = `<!DOCTYPE html>
                     '<button class="hist-remove" onclick="event.stopPropagation(); removeHistoryItem(\'' + e.id + '\')" title="Quitar del historial (no borra la demo)">' + icon('x', 'ic-sm') + '</button>' +
                     '</div>';
             }).join('');
+        }
+
+        function runReanalyzeOutdated() {
+            if (window.reanalyzeOutdated) window.reanalyzeOutdated();
         }
 
         function openHistoryItem(id) {
@@ -2082,6 +2108,7 @@ const AppHTML = `<!DOCTYPE html>
             if (window.getAppInfo) {
                 window.getAppInfo().then(info => {
                     appInfo = info;
+                    renderHistory();
                     const v = info.version === 'dev' ? 'dev' : info.version;
                     document.getElementById('appVersion').innerText = v;
                     document.getElementById('aboutVersion').innerText = v;

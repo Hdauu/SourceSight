@@ -51,21 +51,22 @@ type PlayerSummary struct {
 }
 
 type Entry struct {
-	ID         string   `json:"id"`
-	DemoPath   string   `json:"demoPath"`
-	DemoName   string   `json:"demoName"`
-	SizeBytes  int64    `json:"sizeBytes"`
-	FileSHA256 string   `json:"fileSha256,omitempty"`
-	MatchID    string   `json:"matchId,omitempty"`
-	AnalyzedAt string   `json:"analyzedAt"`
-	MapName    string   `json:"mapName"`
-	Server     string   `json:"server"`
-	Tickrate   int      `json:"tickrate"`
-	TotalTicks int      `json:"totalTicks"`
-	Rounds     int      `json:"rounds"`
-	Minutes    int      `json:"minutes"`
-	Players    int      `json:"players"`
-	Flagged    []string `json:"flagged"`
+	ID              string   `json:"id"`
+	DemoPath        string   `json:"demoPath"`
+	DemoName        string   `json:"demoName"`
+	SizeBytes       int64    `json:"sizeBytes"`
+	FileSHA256      string   `json:"fileSha256,omitempty"`
+	AnalysisVersion int      `json:"analysisVersion,omitempty"` // core.AnalysisVersion at analysis time
+	MatchID         string   `json:"matchId,omitempty"`
+	AnalyzedAt      string   `json:"analyzedAt"`
+	MapName         string   `json:"mapName"`
+	Server          string   `json:"server"`
+	Tickrate        int      `json:"tickrate"`
+	TotalTicks      int      `json:"totalTicks"`
+	Rounds          int      `json:"rounds"`
+	Minutes         int      `json:"minutes"`
+	Players         int      `json:"players"`
+	Flagged         []string `json:"flagged"`
 	// Level is the most serious player level in the demo (core.Level*)
 	Level string `json:"level"`
 	// FlagTypes lists the distinct detections in the demo (AIMLOCK, WALLHACK, ...)
@@ -360,11 +361,12 @@ func Save(demoPath string, rep *core.DemoReport, fileSHA string) (*Entry, error)
 	}
 
 	entry := Entry{
-		ID:         id,
-		DemoPath:   abs,
-		DemoName:   filepath.Base(abs),
-		FileSHA256: fileSHA,
-		AnalyzedAt: time.Now().Format("2006-01-02 15:04:05"),
+		ID:              id,
+		DemoPath:        abs,
+		DemoName:        filepath.Base(abs),
+		FileSHA256:      fileSHA,
+		AnalysisVersion: core.AnalysisVersion,
+		AnalyzedAt:      time.Now().Format("2006-01-02 15:04:05"),
 	}
 	if st, err := os.Stat(abs); err == nil {
 		entry.SizeBytes = st.Size()
@@ -447,4 +449,16 @@ func derive(e *Entry) {
 		e.Level = core.MaxLevel(e.Level, e.Summaries[i].Level)
 	}
 	e.FlagTypes = flagTypes(e.Summaries)
+}
+
+// Outdated returns entries analyzed by an older core.AnalysisVersion.
+func Outdated() []Entry {
+	var out []Entry
+	for _, e := range all() {
+		if e.AnalysisVersion < core.AnalysisVersion {
+			e.Summaries = nil
+			out = append(out, e)
+		}
+	}
+	return out
 }

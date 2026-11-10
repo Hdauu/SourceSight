@@ -263,3 +263,28 @@ func (pdb *PlayerDatabase) Confirmations() map[string]Confirmation {
 	}
 	return out
 }
+
+// ForgetLegacyDemo drops infractions that versions without match fingerprints
+// recorded for a demo file, so re-analyzing that demo doesn't count them twice.
+func (pdb *PlayerDatabase) ForgetLegacyDemo(demoName string) {
+	if demoName == "" {
+		return
+	}
+	pdb.mu.Lock()
+	defer pdb.mu.Unlock()
+	changed := false
+	for _, p := range pdb.Players {
+		kept := p.Infractions[:0]
+		for _, inf := range p.Infractions {
+			if inf.MatchID == "" && inf.DemoName == demoName {
+				changed = true
+				continue
+			}
+			kept = append(kept, inf)
+		}
+		p.Infractions = kept
+	}
+	if changed {
+		pdb.saveUnlocked()
+	}
+}

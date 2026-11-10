@@ -244,10 +244,12 @@ func (a *app) analyze(path string, force bool, label string) (*core.DemoReport, 
 		if _, old := history.Lookup(path); old != nil {
 			pdb.RemoveMatch(old.MatchID)
 		}
+		pdb.ForgetLegacyDemo(filepath.Base(path))
 	}
 
 	// Same match by content: a renamed copy, a second recording or a trimmed file
-	if similar := history.FindSimilar(rep, ownID); len(similar) > 0 {
+	// (skipped on re-analysis: the user already decided about duplicates when adding the demo)
+	if similar := history.FindSimilar(rep, ownID); !force && len(similar) > 0 {
 		old := similar[0]
 		choice := a.ask("Partida repetida",
 			fmt.Sprintf("«%s» parece la misma partida que «%s» (%s, %d rondas, mismos jugadores), analizada el %s. Si guardás las dos, la partida cuenta doble en los promedios del historial.",
@@ -457,6 +459,26 @@ func LaunchApp(initialDemoPath string) error {
 		return nil
 	})
 
+	// reanalyzeOutdated re-runs every stored demo analyzed by older detectors
+	_ = w.Bind("reanalyzeOutdated", func() error {
+		var paths []string
+		missing := 0
+		for _, e := range history.Outdated() {
+			if _, err := os.Stat(e.DemoPath); err != nil {
+				missing++
+				continue
+			}
+			paths = append(paths, e.DemoPath)
+		}
+		if missing > 0 {
+			a.toast(fmt.Sprintf("%d demo(s) ya no están en su carpeta y no se pueden re-analizar", missing))
+		}
+		if len(paths) > 0 {
+			go a.processQueue(paths, true)
+		}
+		return nil
+	})
+
 	_ = w.Bind("reanalyzeCurrent", func() error {
 		_, path := current()
 		if path == "" {
@@ -602,10 +624,11 @@ func LaunchApp(initialDemoPath string) error {
 
 	_ = w.Bind("getAppInfo", func() map[string]string {
 		return map[string]string{
-			"version":   version.Version,
-			"repoUrl":   version.RepoURL,
-			"dataDir":   appdata.Dir(),
-			"exportDir": appdata.ExportDir(),
+			"version":         version.Version,
+			"analysisVersion": strconv.Itoa(core.AnalysisVersion),
+			"repoUrl":         version.RepoURL,
+			"dataDir":         appdata.Dir(),
+			"exportDir":       appdata.ExportDir(),
 		}
 	})
 

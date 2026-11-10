@@ -70,3 +70,11 @@ func KnownFlags() []string {
 	}
 	return out
 }
+
+// AnalysisVersion changes whenever detectors change in a way that makes older
+// reports incomplete. Stored with each history entry, so the app can offer to
+// re-analyze demos analyzed by an older version.
+//
+//	1: up to v2.2.0
+//	2: prefire detection (v2.3.0)
+const AnalysisVersion = 2
