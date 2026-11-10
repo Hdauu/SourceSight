@@ -140,7 +140,8 @@ const AppHTML = `<!DOCTYPE html>
         .layout { flex: 1; display: flex; min-height: 0; }
 
         aside {
-            width: 264px;
+            position: relative;
+            width: 288px;
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
@@ -194,7 +195,31 @@ const AppHTML = `<!DOCTYPE html>
         .aside-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; }
         .aside-search { padding: 10px 10px 8px; display: flex; flex-direction: column; gap: 6px; }
         .seg-full { display: flex; }
-        .seg-full button { flex: 1; padding: 0 4px; }
+        .seg-full button { flex: 1 1 auto; min-width: 0; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Drag handle on the sidebar edge */
+        .aside-resizer {
+            position: absolute;
+            top: 0;
+            right: -4px;
+            width: 8px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 20;
+        }
+        .aside-resizer::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 3px;
+            width: 2px;
+            background: transparent;
+            transition: background 0.12s;
+        }
+        .aside-resizer:hover::after, .aside-resizer:focus-visible::after, body.resizing .aside-resizer::after { background: var(--accent); }
+        .aside-resizer:focus-visible { outline: none; }
+        body.resizing { cursor: col-resize; user-select: none; }
         .aside-hint { font-size: 11.5px; color: var(--muted); }
         .aside-hint:empty { display: none; }
 
@@ -567,7 +592,6 @@ const AppHTML = `<!DOCTYPE html>
         .toast.show { opacity: 1; transform: none; }
 
         @media (max-width: 1100px) {
-            aside { width: 220px; }
             .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .sum-cell:nth-child(3) { border-left: 0; }
             .sum-cell:nth-child(n+3) { border-top: 1px solid var(--border); }
@@ -627,7 +651,8 @@ const AppHTML = `<!DOCTYPE html>
     </div>
 
     <div class="layout">
-        <aside>
+        <aside id="aside">
+            <div class="aside-resizer" id="asideResizer" role="separator" aria-orientation="vertical" aria-label="Ancho del panel" tabindex="0" title="Arrastrá para cambiar el ancho (doble click: volver al normal)"></div>
             <div class="aside-tabs" role="tablist">
                 <button class="on" id="tabDemos" role="tab" onclick="setAsideTab('demos')">Demos <span class="num" id="histCount"></span></button>
                 <button id="tabPlayers" role="tab" onclick="setAsideTab('players')">Jugadores</button>
@@ -1964,6 +1989,40 @@ const AppHTML = `<!DOCTYPE html>
 
         function dismissUpdate() { document.getElementById('updateBar').style.display = 'none'; }
 
+        // ── Resizable sidebar ─────────────────────────────────────────────
+        // Width is saved in the app config (the page has no web origin, so browser
+        // storage isn't reliable here).
+        const ASIDE_DEFAULT = 288, ASIDE_MIN = 220, ASIDE_MAX = 560;
+        const aside = document.getElementById('aside');
+        const resizer = document.getElementById('asideResizer');
+
+        function setAsideWidth(px, save) {
+            const w = Math.round(Math.min(ASIDE_MAX, Math.max(ASIDE_MIN, px)));
+            aside.style.width = w + 'px';
+            if (save && window.saveSidebarWidth) window.saveSidebarWidth(w === ASIDE_DEFAULT ? 0 : w);
+        }
+
+        resizer.addEventListener('mousedown', e => {
+            e.preventDefault();
+            const startX = e.clientX, startW = aside.getBoundingClientRect().width;
+            document.body.classList.add('resizing');
+            const move = ev => setAsideWidth(startW + ev.clientX - startX, false);
+            const up = () => {
+                document.body.classList.remove('resizing');
+                window.removeEventListener('mousemove', move);
+                window.removeEventListener('mouseup', up);
+                setAsideWidth(aside.getBoundingClientRect().width, true);
+            };
+            window.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', up);
+        });
+        resizer.addEventListener('dblclick', () => setAsideWidth(ASIDE_DEFAULT, true));
+        resizer.addEventListener('keydown', e => {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+            e.preventDefault();
+            setAsideWidth(aside.getBoundingClientRect().width + (e.key === 'ArrowRight' ? 16 : -16), true);
+        });
+
         // ── Drag & drop ───────────────────────────────────────────────────
         // WebView2 hands the real file paths to Go when the File objects travel with
         // postMessageWithAdditionalObjects; older runtimes only give us the names.
@@ -2027,6 +2086,14 @@ const AppHTML = `<!DOCTYPE html>
                 });
             }
             // Flag levels and staff confirmations must be known before anything renders
+            if (window.getConfig) {
+                window.getConfig().then(s => {
+                    try {
+                        const w = JSON.parse(s).sidebarWidth;
+                        if (w) setAsideWidth(w, false);
+                    } catch (e) {}
+                });
+            }
             const levels = window.getFlagLevels ? window.getFlagLevels().then(m => { FLAG_LEVELS = m || {}; }) : Promise.resolve();
             const confirmed = new Promise(resolve => refreshConfirmed(resolve));
             Promise.all([levels, confirmed]).finally(() => {

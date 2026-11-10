@@ -621,10 +621,16 @@ func LaunchApp(initialDemoPath string) error {
 	})
 
 	_ = w.Bind("saveConfig", func(path string, preroll float64) error {
-		return launcher.SaveConfig(launcher.AppConfig{
-			CSGOPath:       launcher.CleanCSGODir(path),
-			PrerollSeconds: preroll,
-		})
+		cfg := launcher.LoadConfig() // keep fields this dialog doesn't edit
+		cfg.CSGOPath = launcher.CleanCSGODir(path)
+		cfg.PrerollSeconds = preroll
+		return launcher.SaveConfig(cfg)
+	})
+
+	_ = w.Bind("saveSidebarWidth", func(width int) error {
+		cfg := launcher.LoadConfig()
+		cfg.SidebarWidth = width
+		return launcher.SaveConfig(cfg)
 	})
 
 	_ = w.Bind("browseCSGOPath", func() (string, error) {

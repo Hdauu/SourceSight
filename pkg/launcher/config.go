@@ -10,8 +10,9 @@ import (
 )
 
 type AppConfig struct {
-	CSGOPath       string  `json:"csgoPath"`       // Path to 'csgo' directory or game root
-	PrerollSeconds float64 `json:"prerollSeconds"` // Seconds to rewind before incident
+	CSGOPath       string  `json:"csgoPath"`               // Path to 'csgo' directory or game root
+	PrerollSeconds float64 `json:"prerollSeconds"`         // Seconds to rewind before incident
+	SidebarWidth   int     `json:"sidebarWidth,omitempty"` // px; 0 = default
 }
 
 var (
