@@ -85,7 +85,10 @@ func fakeGame(t *testing.T) (got chan string) {
 				for sc.Scan() {
 					got <- sc.Text()
 					if strings.HasPrefix(sc.Text(), "playdemo") {
+						// Lines copied from a real CS:GO legacy console
+						c.Write([]byte("ChangeGameUIState: CSGO_GAME_UI_STATE_MAINMENU -> CSGO_GAME_UI_STATE_LOADINGSCREEN\r\n"))
 						c.Write([]byte("Playing demo from x.dem.\r\n"))
+						c.Write([]byte("ChangeGameUIState: CSGO_GAME_UI_STATE_LOADINGSCREEN -> CSGO_GAME_UI_STATE_INGAME\r\n"))
 					}
 				}
 			}()
@@ -120,5 +123,47 @@ func TestSendToRunningGame(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("timeout waiting for seek")
+	}
+}
+
+func TestFreshLaunchWaitsForMenu(t *testing.T) {
+	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", NetconPort))
+	if err != nil {
+		t.Skipf("port %d busy: %v", NetconPort, err)
+	}
+	defer ln.Close()
+	got := make(chan string, 10)
+	go func() {
+		c, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		// Game still booting: nothing may be sent before the main menu shows up
+		time.Sleep(300 * time.Millisecond)
+		select {
+		case <-got:
+			t.Error("command sent before the main menu")
+		default:
+		}
+		c.Write([]byte("ChangeGameUIState: CSGO_GAME_UI_STATE_INTROMOVIE -> CSGO_GAME_UI_STATE_MAINMENU\r\n"))
+		sc := bufio.NewScanner(c)
+		for sc.Scan() {
+			got <- sc.Text()
+			if strings.HasPrefix(sc.Text(), "playdemo") {
+				c.Write([]byte("ChangeGameUIState: CSGO_GAME_UI_STATE_LOADINGSCREEN -> CSGO_GAME_UI_STATE_INGAME\r\n"))
+			}
+		}
+	}()
+	lastPlayed = ""
+	go launchAndPlay("sourcesight_ab/demo2", 700)
+	for _, w := range []string{`playdemo "sourcesight_ab/demo2"`, "demo_gototick 700"} {
+		select {
+		case line := <-got:
+			if line != w {
+				t.Fatalf("got %q, want %q", line, w)
+			}
+		case <-time.After(10 * time.Second):
+			t.Fatalf("timeout waiting for %q", w)
+		}
 	}
 }

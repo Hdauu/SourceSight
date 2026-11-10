@@ -143,21 +143,26 @@ func LaunchInGame(demoPath string, tick, tickrate int) error {
 		return ErrGameWithoutConsole
 	}
 
-	consoleMu.Lock()
-	lastPlayed = ref
-	consoleMu.Unlock()
-	gameArgs := []string{"-novid", "-netconport", fmt.Sprint(NetconPort),
-		"+playdemo", ref, "+demo_gototick", fmt.Sprint(preroll)}
+	// The demo is not passed on the command line ("+playdemo" there is ignored by the
+	// Panorama menu); launchAndPlay sends it through the console once the menu is up.
+	gameArgs := []string{"-novid", "-netconport", fmt.Sprint(NetconPort)}
 
 	// The game must be started by Steam: running csgo.exe directly fails with
 	// "Failed to connect with local Steam Client process". CS:GO Legacy is its own
 	// Steam app (4465480), not 730 (now CS2), so the app ID comes from Steam's manifest.
 	steamExe, appID := steamLaunchInfo(filepath.Dir(csgoDir))
+	var start *exec.Cmd
 	if steamExe != "" {
-		return exec.Command(steamExe, append([]string{"-applaunch", appID}, gameArgs...)...).Start()
+		start = exec.Command(steamExe, append([]string{"-applaunch", appID}, gameArgs...)...)
+	} else {
+		steamURL := fmt.Sprintf("steam://run/%s//%s", appID, strings.Join(gameArgs, " "))
+		start = exec.Command("rundll32", "url.dll,FileProtocolHandler", steamURL)
 	}
-	steamURL := fmt.Sprintf("steam://run/%s//%s", appID, strings.Join(gameArgs, " "))
-	return exec.Command("rundll32", "url.dll,FileProtocolHandler", steamURL).Start()
+	if err := start.Start(); err != nil {
+		return err
+	}
+	go launchAndPlay(ref, preroll)
+	return nil
 }
 
 var acfField = regexp.MustCompile(`"(\w+)"\s+"([^"]*)"`)

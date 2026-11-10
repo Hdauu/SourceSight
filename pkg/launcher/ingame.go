@@ -62,49 +62,86 @@ func demoRef(csgoDir, demoPath string) (string, error) {
 	return link + "/" + name, nil
 }
 
-// sendToRunningGame plays the demo in a CS:GO started with -netconport. When the
-// same demo is already playing it only seeks; otherwise it loads the demo, waits for
-// playback to start (or a timeout) and then seeks.
+// sendToRunningGame plays the demo in an open CS:GO started with -netconport.
+// It returns false when no game console is listening.
 func sendToRunningGame(ref string, tick int) bool {
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", NetconPort), 400*time.Millisecond)
 	if err != nil {
 		return false
 	}
-	go func() {
-		defer conn.Close()
-		consoleMu.Lock()
-		defer consoleMu.Unlock()
-
-		send := func(cmd string) error {
-			_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
-			_, err := conn.Write([]byte(cmd + "\n"))
-			return err
-		}
-		gotoCmd := fmt.Sprintf("demo_gototick %d", tick)
-		if ref == lastPlayed {
-			_ = send(gotoCmd)
-			return
-		}
-		if send(fmt.Sprintf(`playdemo "%s"`, ref)) != nil {
-			return
-		}
-		lastPlayed = ref
-		waitForPlayback(conn, 15*time.Second)
-		time.Sleep(time.Second) // let the demo settle before seeking
-		_ = send(gotoCmd)
-	}()
+	go playOverConsole(conn, ref, tick, false)
 	return true
 }
 
-// waitForPlayback reads console output until the demo starts playing or timeout.
-func waitForPlayback(conn net.Conn, timeout time.Duration) {
-	_ = conn.SetReadDeadline(time.Now().Add(timeout))
-	sc := bufio.NewScanner(conn)
-	for sc.Scan() {
-		if strings.Contains(strings.ToLower(sc.Text()), "playing demo") {
+// launchAndPlay waits for a game just started by Steam to open its console and reach
+// the main menu, then plays the demo. "+playdemo" on the command line doesn't work:
+// it runs before the Panorama menu is ready and the game ignores it.
+func launchAndPlay(ref string, tick int) {
+	deadline := time.Now().Add(3 * time.Minute)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", NetconPort), time.Second)
+		if err == nil {
+			playOverConsole(conn, ref, tick, true)
 			return
 		}
+		time.Sleep(time.Second)
 	}
+}
+
+// playOverConsole loads the demo (unless it's the one already playing) and seeks to
+// tick once the map has loaded. Lines come from the game's console output.
+func playOverConsole(conn net.Conn, ref string, tick int, freshLaunch bool) {
+	defer conn.Close()
+	consoleMu.Lock()
+	defer consoleMu.Unlock()
+
+	lines := make(chan string, 256)
+	go func() {
+		defer close(lines)
+		sc := bufio.NewScanner(conn)
+		for sc.Scan() {
+			lines <- sc.Text()
+		}
+	}()
+	waitFor := func(substr string, timeout time.Duration) bool {
+		limit := time.After(timeout)
+		for {
+			select {
+			case l, ok := <-lines:
+				if !ok {
+					return false
+				}
+				if strings.Contains(l, substr) {
+					return true
+				}
+			case <-limit:
+				return false
+			}
+		}
+	}
+	send := func(cmd string) error {
+		_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+		_, err := conn.Write([]byte(cmd + "\n"))
+		return err
+	}
+	gotoCmd := fmt.Sprintf("demo_gototick %d", tick)
+
+	if freshLaunch {
+		waitFor("-> CSGO_GAME_UI_STATE_MAINMENU", 45*time.Second)
+		time.Sleep(2 * time.Second)
+	} else if ref == lastPlayed {
+		_ = send(gotoCmd)
+		return
+	}
+
+	if send(fmt.Sprintf(`playdemo "%s"`, ref)) != nil {
+		return
+	}
+	lastPlayed = ref
+	// Seeking during the loading screen is ignored: wait until the map is in game
+	waitFor("-> CSGO_GAME_UI_STATE_INGAME", 90*time.Second)
+	time.Sleep(1500 * time.Millisecond)
+	_ = send(gotoCmd)
 }
 
 // gameRunning reports whether csgo.exe is running.
