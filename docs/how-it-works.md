@@ -8,7 +8,7 @@ A 35-minute demo at 128 tick (about 270,000 ticks) takes around 4 seconds.
 
 ## Autobunny (`pkg/modules/bhop.go`)
 
-A jump is *perfect* if it leaves the ground within the first tick after landing: `Jump()` then runs before friction and no speed is lost. A person scrolling the mouse wheel hits 20–50%. It flags at 75% or more (minimum 10 jumps) or 5 perfect hops in a row. 55% or more is marked suspicious.
+A jump is *perfect* if it leaves the ground within the first tick after landing: `Jump()` then runs before friction and no speed is lost. A person scrolling the mouse wheel hits 20–50%. It flags as a cheat at 75% or more over at least 10 jumps. With 30+ jumps, 55% or a streak of 5 perfect hops is suspicious: a good legit bhopper can chain a streak like that once in a while, and few jumps are too small a sample.
 
 ## Triggerbot (`pkg/modules/trigger.go`)
 
@@ -16,7 +16,7 @@ A ray is cast from the player's eyes along their view and intersected with each 
 
 ## Aimlock and spinbot (`pkg/modules/aim.go`)
 
-It measures how much the view angles turn between one tick and the next, correcting the 359° to 0° wrap. A turn of more than 45° in one tick is a *snap*. A human flick can produce an isolated one, so it only flags when there are 5 or more within the same second (and 10 in total). That is what a spinbot or anti-aim looks like: yaw jumps to a different value every tick, usually with pitch pinned at ±89°.
+It measures how much the view angles turn between one tick and the next, correcting the 359° to 0° wrap. A turn of more than 45° in one tick is a *snap*. A human flick can produce an isolated one, so it only counts when there are 5 or more within the same second. 50 or more per match is a cheat; 10 to 49 is suspicious (a briefly toggled spinbot or odd flicks). That is what a spinbot or anti-aim looks like: yaw jumps to a different value every tick, usually with pitch pinned at ±89°.
 
 The first 1.5 s after spawning are ignored, as are changes to a pitch of exactly 0, which are angles the server forces on spawn or teleport.
 

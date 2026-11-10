@@ -18,6 +18,7 @@ var flagLevels = map[string]string{
 	"MACRO":      LevelCheat,
 
 	"SOSPECHOSO-BHOP": LevelSuspect,
+	"SOSPECHOSO-AIM":  LevelSuspect,
 	"ANTI-FLASH":      LevelSuspect,
 	"SMOKE-VISION":    LevelSuspect,
 	"PREFIRE":         LevelSuspect,
@@ -77,4 +78,5 @@ func KnownFlags() []string {
 //
 //	1: up to v2.2.0
 //	2: prefire detection (v2.3.0)
-const AnalysisVersion = 2
+//	3: stricter cheat level for bhop streaks and few aim snaps (v2.3.0)
+const AnalysisVersion = 3

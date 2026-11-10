@@ -932,9 +932,9 @@ const AppHTML = `<!DOCTYPE html>
                 <div>
                     <div class="block-title">Umbrales de detección</div>
                     <dl class="kv">
-                        <dt>Autobunny</dt><dd>75% de perfs o más, o 5 perfs seguidos</dd>
+                        <dt>Autobunny</dt><dd>75% de perfs o más en al menos 10 saltos. Con 30 saltos o más, 55% o 5 perfs seguidos queda como sospechoso</dd>
                         <dt>Triggerbot</dt><dd>reacción media menor a 80 ms con desvío menor a 15 ms</dd>
-                        <dt>Aimlock / spinbot</dt><dd>5 o más giros de más de 45° en un tick dentro de 1 segundo</dd>
+                        <dt>Aimlock / spinbot</dt><dd>Giros de más de 45° en un tick, varios dentro de 1 segundo: 50 o más en la partida es cheat, de 10 a 49 es sospechoso</dd>
                         <dt>Wallhack</dt><dd>seguir con la mira a un enemigo oculto durante 1 s y 20° de recorrido, 3 veces</dd>
                         <dt>Silent aim</dt><dd>3 impactos con más de 35° de diferencia entre la mira y el daño</dd>
                     </dl>

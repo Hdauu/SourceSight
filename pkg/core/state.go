@@ -194,8 +194,11 @@ func (ps *PlayerState) ComputeStats(tickrate int) PlayerStats {
 
 	var flags []string
 
-	bhopCheat := (perfRatio >= BhopCheatPerfRatio && ps.Bhop.TotalJumps >= 10) || ps.Bhop.MaxStreak >= BhopCheatStreak
-	bhopSusp := !bhopCheat && perfRatio >= BhopSuspPerfRatio && ps.Bhop.TotalJumps >= BhopMinJumps
+	// Cheat only on the ratio over enough jumps; a streak alone or a high ratio over few
+	// jumps can happen to a good legit bhopper, so those are only suspicious.
+	bhopCheat := perfRatio >= BhopCheatPerfRatio && ps.Bhop.TotalJumps >= BhopCheatMinJumps
+	bhopSusp := !bhopCheat && ps.Bhop.TotalJumps >= BhopSuspMinJumps &&
+		(perfRatio >= BhopSuspPerfRatio || ps.Bhop.MaxStreak >= BhopCheatStreak)
 
 	bhopVerdict := "Limpio"
 	if bhopCheat {
@@ -227,8 +230,14 @@ func (ps *PlayerState) ComputeStats(tickrate int) PlayerStats {
 	if len(ps.Aim.SilentEvents) >= 3 {
 		flags = append(flags, "SILENT AIM")
 	}
+	// Spinbots produce hundreds of snaps; a handful in bursts is worth a look but can be
+	// a brief toggle or odd flicks, so it is only suspicious.
 	if len(ps.Aim.SnapEvents) >= AimMinSnapsToFlag && maxSnapBurst(ps.Aim.SnapEvents, tickrate) >= AimBurstMinSnaps {
-		flags = append(flags, "AIMLOCK")
+		if len(ps.Aim.SnapEvents) >= AimCheatMinSnaps {
+			flags = append(flags, "AIMLOCK")
+		} else {
+			flags = append(flags, "SOSPECHOSO-AIM")
+		}
 	}
 
 	// Module E: Macro

@@ -23,9 +23,9 @@ Corre en Windows, todo local. No sube nada a ningún lado.
 
 | Detección | Qué mira | Cuándo marca |
 |---|---|---|
-| Autobunny | Saltos en el primer tick de contacto con el piso | 75% o más de perfs, o 5 perfs seguidos |
+| Autobunny | Saltos en el primer tick de contacto con el piso | 75% o más de perfs en 10 saltos o más. Con 30 saltos o más, 55% o 5 seguidos es sospechoso |
 | Triggerbot | Tiempo entre tener un enemigo en la mira y disparar | Promedio menor a 80 ms con desvío menor a 15 ms |
-| Aimlock / spinbot | Giros de más de 45° en un solo tick | 5 o más dentro de un segundo, y al menos 10 en la partida |
+| Aimlock / spinbot | Giros de más de 45° en un solo tick | Varios dentro de un segundo: 50 o más en la partida es cheat, de 10 a 49 sospechoso |
 | Silent aim | Diferencia entre hacia dónde mira y dónde pega | 3 impactos con más de 35° de diferencia |
 | Wallhack | Seguir con la mira a un enemigo que no tiene a la vista | 1 s siguiéndolo con 20° de recorrido, 3 veces |
 | Prefire | Daño apenas el rival queda a la vista | 35% o más de sus peleas en menos de 100 ms, mediana menor a 150 ms, al menos 15 peleas (sospechoso) |
@@ -41,7 +41,7 @@ Cada jugador recibe un nivel:
 | Nivel | Qué significa |
 |---|---|
 | **Cheat detectado** | Superó un umbral fuerte: autobunny, triggerbot, aimlock/spinbot, silent aim, wallhack o macro |
-| **Sospechoso** | Indicios más débiles que conviene mirar: bhop alto, prefire, kills cegado o a través de humo |
+| **Sospechoso** | Indicios más débiles que conviene mirar: bhop alto o rachas de perfs, algunos giros bruscos, prefire, kills cegado o a través de humo |
 | **Conducta** | No es cheat pero le importa al staff: AFK, flashes al propio equipo |
 | **Limpio** | No se encontró nada |
 | **Confirmado** | Lo marca un admin después de ver la demo, nunca la app. Queda guardado por SteamID |

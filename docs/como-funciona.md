@@ -8,7 +8,7 @@ Una demo de 35 minutos a 128 tick (unos 270.000 ticks) tarda alrededor de 4 segu
 
 ## Autobunny (`pkg/modules/bhop.go`)
 
-Un salto es *perfecto* si sale del piso dentro del primer tick de haber aterrizado: ahí `Jump()` se ejecuta antes que la fricción y no se pierde velocidad. Una persona con la rueda del mouse acierta entre 20% y 50%. Se marca con 75% o más (mínimo 10 saltos) o con 5 perfectos seguidos. Con 55% o más queda como sospechoso.
+Un salto es *perfecto* si sale del piso dentro del primer tick de haber aterrizado: ahí `Jump()` se ejecuta antes que la fricción y no se pierde velocidad. Una persona con la rueda del mouse acierta entre 20% y 50%. Se marca como cheat con 75% o más en al menos 10 saltos. Con 30 saltos o más, 55% o una racha de 5 perfectos seguidos queda como sospechoso: un buen bhopper puede encadenar una racha así alguna vez, y con pocos saltos la muestra no alcanza.
 
 ## Triggerbot (`pkg/modules/trigger.go`)
 
@@ -16,7 +16,7 @@ Se traza un rayo desde los ojos del jugador hacia donde mira y se intersecta con
 
 ## Aimlock y spinbot (`pkg/modules/aim.go`)
 
-Se mide cuánto giran los ángulos de vista entre un tick y el siguiente, corrigiendo el salto de 359° a 0°. Un giro de más de 45° en un tick es un *snap*. Un flick humano puede producir alguno suelto, por eso se marca solo cuando hay 5 o más dentro de un mismo segundo (y 10 en total). Así es como se ve un spinbot o un anti-aim: el yaw salta a un valor distinto en cada tick, normalmente con el pitch fijo en ±89°.
+Se mide cuánto giran los ángulos de vista entre un tick y el siguiente, corrigiendo el salto de 359° a 0°. Un giro de más de 45° en un tick es un *snap*. Un flick humano puede producir alguno suelto, por eso cuenta solo cuando hay 5 o más dentro de un mismo segundo. Con 50 o más en la partida es cheat; de 10 a 49 queda como sospechoso (puede ser un spinbot activado un momento o flicks raros). Así es como se ve un spinbot o un anti-aim: el yaw salta a un valor distinto en cada tick, normalmente con el pitch fijo en ±89°.
 
 Se ignoran los primeros 1,5 s después de aparecer y los cambios a pitch exactamente 0, que son ángulos que impone el servidor al spawnear o teletransportar.
 

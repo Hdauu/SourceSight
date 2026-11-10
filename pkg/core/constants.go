@@ -17,6 +17,8 @@ const (
 	BhopPerfWindow        = 1  // 0 or 1 ticks on ground
 	BhopMaxGroundWindow   = 15 // hops with >15 ground ticks are walking/stopping
 	BhopMinJumps          = 5  // minimum jumps required for evaluation
+	BhopCheatMinJumps     = 10 // AUTOBUNNY needs the ratio over at least this many jumps
+	BhopSuspMinJumps      = 30 // fewer jumps are too small a sample to call suspicious
 	BhopCheatPerfRatio    = 75.0
 	BhopSuspPerfRatio     = 55.0
 	BhopCheatStreak       = 5 // consecutive perfect hops (P < 0.2%)
@@ -33,6 +35,7 @@ const (
 	AimWrapThreshold    = 180.0
 	AimAliveWarmup      = 192 // ticks after spawn to ignore warmup flick
 	AimMinSnapsToFlag   = 10
+	AimCheatMinSnaps    = 50   // spinbots: hundreds of snaps; fewer stays suspicious
 	AimBurstMinSnaps    = 5    // snaps inside a 1s window: isolated human flicks never cluster like this
 	SilentAimDivDeg     = 25.0 // exceeds maximum running spray inaccuracy cone
 
