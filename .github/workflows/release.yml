@@ -1,0 +1,63 @@
+# Publishes a version: git tag v2.1.0 && git push origin v2.1.0
+# Builds the three executables with the embedded icon, the installer and a zip,
+# then creates the GitHub Release. Installed copies pick it up on launch (pkg/update).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - run: go test ./...
+
+      - name: Icon and version info for the .exe files
+        shell: bash
+        run: |
+          V="${GITHUB_REF_NAME#v}"
+          for d in cmd/sourcesight cmd/bot; do
+            (cd "$d" && go run github.com/tc-hib/go-winres@v0.3.3 make --in winres/winres.json --arch amd64 --product-version "$V" --file-version "$V")
+          done
+
+      - name: Build
+        shell: bash
+        run: |
+          LD="-s -w -X sourcesight/pkg/version.Version=${GITHUB_REF_NAME}"
+          mkdir dist
+          go build -trimpath -ldflags "-H windowsgui $LD" -o dist/SourceSight.exe ./cmd/sourcesight
+          go build -trimpath -ldflags "$LD" -o dist/SourceSightCLI.exe ./cmd/sourcesight
+          go build -trimpath -ldflags "$LD" -o dist/SourceSightBot.exe ./cmd/bot
+          cp README.md README.es.md LICENSE dist/
+
+      - name: Installer
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $v = "$env:GITHUB_REF_NAME".TrimStart('v')
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$v" "/DDist=..\dist" installer\SourceSight.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Zip
+        shell: bash
+        run: (cd dist && 7z a "../SourceSight-${GITHUB_REF_NAME}-portable.zip" .)
+
+      - name: Publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "SourceSight-Setup-${GITHUB_REF_NAME}.exe" \
+            "SourceSight-${GITHUB_REF_NAME}-portable.zip" \
+            dist/SourceSight.exe dist/SourceSightCLI.exe dist/SourceSightBot.exe \
+            --title "SourceSight $GITHUB_REF_NAME" --generate-notes

@@ -1,0 +1,45 @@
+{
+  "RT_GROUP_ICON": {
+    "#1": {
+      "0000": ["icon_256.png", "icon_128.png", "icon_64.png", "icon_48.png", "icon_32.png", "icon_24.png", "icon_16.png"]
+    }
+  },
+  "RT_MANIFEST": {
+    "#1": {
+      "0409": {
+        "identity": { "name": "SourceSight", "version": "" },
+        "description": "SourceSight",
+        "minimum-os": "win7",
+        "execution-level": "as invoker",
+        "ui-access": false,
+        "auto-elevate": false,
+        "dpi-awareness": "unaware",
+        "disable-theming": false,
+        "disable-window-filtering": false,
+        "high-resolution-scrolling-aware": false,
+        "ultra-high-resolution-scrolling-aware": false,
+        "long-path-aware": true,
+        "printer-driver-isolation": false,
+        "gdi-scaling": false,
+        "segment-heap": false,
+        "use-common-controls-v6": true
+      }
+    }
+  },
+  "RT_VERSION": {
+    "#1": {
+      "0000": {
+        "fixed": { "file_version": "0.0.0.0", "product_version": "0.0.0.0" },
+        "info": {
+          "0409": {
+            "CompanyName": "Hdauu",
+            "FileDescription": "SourceSight - Discord bot",
+            "LegalCopyright": "MIT + Commons Clause. Not for sale.",
+            "ProductName": "SourceSight",
+            "OriginalFilename": "SourceSightBot.exe"
+          }
+        }
+      }
+    }
+  }
+}

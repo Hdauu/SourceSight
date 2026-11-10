@@ -1,0 +1,23 @@
+# Binarios (se publican en Releases, no en el repo)
+*.exe
+*.exe~
+*.exe.old
+*.exe.new
+*.syso
+
+# Datos y configuración local — nunca subir
+bot_config.json
+sourcesight_players.json
+sourcesight_history.json
+sourcesight_config.json
+reportes/
+temp/
+
+# Demos y reportes generados
+*.dem
+reporte_*.png
+evidencia_*.html
+
+# Scripts y configuración locales (no van al repo)
+*.bat
+bot_config*.json
