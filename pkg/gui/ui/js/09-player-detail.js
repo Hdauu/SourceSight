@@ -35,6 +35,7 @@ function openPlayer(p) {
             : '') +
         '</div>';
     if (hasSteam) html += '<div>' + confirmBlock(sid, p.name, levelOf(p)) + '</div>';
+    html += notesBlock(p.notes);
 
     html += '<div><div class="block-title">Métricas</div><div class="stats">' +
         stat('Saltos', p.totalJumps) +

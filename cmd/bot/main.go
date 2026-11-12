@@ -284,18 +284,23 @@ func main() {
 			tlStr = strings.Join(tlLines, "\n")
 		}
 
+		fields := []*discordgo.MessageEmbedField{
+			{Name: "Mapa", Value: fmt.Sprintf("`%s`", rep.Header.MapName), Inline: true},
+			{Name: "Tickrate", Value: fmt.Sprintf("`%d`", rep.Header.Tickrate), Inline: true},
+			{Name: "Ticks", Value: fmt.Sprintf("`%d`", rep.Header.TotalTicks), Inline: true},
+			{Name: "Top Jugador", Value: topInfo, Inline: false},
+			{Name: "Flags Detectadas", Value: flagsStr, Inline: false},
+		}
+		if notes := notesField(rep); notes != "" {
+			fields = append(fields, &discordgo.MessageEmbedField{Name: "Para mirar (informativo)", Value: notes, Inline: false})
+		}
+		fields = append(fields, &discordgo.MessageEmbedField{Name: "Timeline (pegar en CS:GO)", Value: tlStr, Inline: false})
+
 		embed := &discordgo.MessageEmbed{
 			Title:       title,
 			Description: dupNote,
 			Color:       color,
-			Fields: []*discordgo.MessageEmbedField{
-				{Name: "Mapa", Value: fmt.Sprintf("`%s`", rep.Header.MapName), Inline: true},
-				{Name: "Tickrate", Value: fmt.Sprintf("`%d`", rep.Header.Tickrate), Inline: true},
-				{Name: "Ticks", Value: fmt.Sprintf("`%d`", rep.Header.TotalTicks), Inline: true},
-				{Name: "Top Jugador", Value: topInfo, Inline: false},
-				{Name: "Flags Detectadas", Value: flagsStr, Inline: false},
-				{Name: "Timeline (pegar en CS:GO)", Value: tlStr, Inline: false},
-			},
+			Fields:      fields,
 			Image: &discordgo.MessageEmbedImage{
 				URL: "attachment://reporte.png",
 			},
@@ -348,4 +353,26 @@ func shortDate(ts string) string {
 		return ts
 	}
 	return ts[8:10] + "/" + ts[5:7] + "/" + ts[0:4]
+}
+
+// notesField lists the observations of every player (informative, see core/notes.go),
+// cut to fit Discord's 1024-character limit for an embed field.
+func notesField(rep *core.DemoReport) string {
+	var lines []string
+	for _, p := range rep.Players {
+		for _, n := range p.Notes {
+			lines = append(lines, fmt.Sprintf("• **%s**: %s", p.Name, n))
+		}
+	}
+	out := ""
+	for i, l := range lines {
+		if len(out)+len(l) > 950 {
+			return out + fmt.Sprintf("\n… y %d más en la app", len(lines)-i)
+		}
+		if out != "" {
+			out += "\n"
+		}
+		out += l
+	}
+	return out
 }

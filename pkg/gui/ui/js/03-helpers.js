@@ -53,3 +53,13 @@ function hitTotals(h) {
         accuracy: h.shots > 0 ? Math.round(1000 * total / h.shots) / 10 : null
     };
 }
+
+// Observations: numbers that stand out against other players. Informative only.
+function notesBlock(notes, title) {
+    if (!notes || !notes.length) return '';
+    return '<div class="callout notes">' +
+        '<div class="block-title" style="margin:0;">' + (title || 'Para mirar') + '</div>' +
+        '<ul>' + notes.map(n => '<li>' + esc(n) + '</li>').join('') + '</ul>' +
+        '<div class="notes-foot">Solo informativo: no cambia el resultado. Conviene confirmarlo mirando la demo.</div>' +
+    '</div>';
+}

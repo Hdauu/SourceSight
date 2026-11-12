@@ -333,11 +333,13 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		gs := p.GameState()
 		tick := gs.IngameTick()
 
-		// Scoreboard ping, once per second (the server doesn't update it faster)
+		// Scoreboard ping, once per second (the server doesn't update it faster). Only while
+		// alive: it's when reactions are measured, and it skips the spikes of connecting,
+		// loading the map or spectating.
 		if tick-lastPingTick >= tickrate {
 			lastPingTick = tick
 			for _, pl := range gs.Participants().Playing() {
-				if st := getState(pl); st != nil {
+				if st := getState(pl); st != nil && pl.IsAlive() {
 					st.Ping.Sample(pl.Ping())
 				}
 			}
@@ -538,6 +540,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		s := st.ComputeStats(tickrate)
 		playerStats = append(playerStats, s)
 	}
+	core.MatchNotes(playerStats)
 
 	// Sort: cheaters / suspicious first, then by perf ratio descending. Name and
 	// SteamID break ties so the same demo always yields the same order (players come

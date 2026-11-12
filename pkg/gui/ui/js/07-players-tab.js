@@ -135,6 +135,7 @@ function openPlayerPage(steamId) {
                 '<div class="sum-cell"><div class="sum-label">Incidentes</div><div class="sum-value">' + d.totals.incidents + '</div><div class="sum-sub">' + fmtNum(a.incidentsPerDemo) + ' por demo</div></div>' +
                 '<div class="sum-cell"><div class="sum-label">Kills cegado / humo</div><div class="sum-value">' + d.totals.blind + ' / ' + d.totals.smoke + '</div><div class="sum-sub">macro: ' + d.totals.macro + '</div></div>' +
             '</div>' +
+            notesBlock(d.notes, 'Para mirar en sus demos') +
             '<section class="panel"><div class="panel-head"><div class="panel-title">Promedio del jugador vs. todos</div><span class="muted">En rojo, lo que está muy por encima del promedio general</span></div>' +
             '<div class="table-wrap"><table class="compare"><thead><tr><th></th><th class="r">Este jugador</th><th class="r">Promedio general</th></tr></thead><tbody>' +
                 compareRow('Perfs de bhop', a.perfRatio, g.perfRatio, '%', true, true) +

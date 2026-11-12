@@ -50,6 +50,7 @@ type PlayerSummary struct {
 	Incidents       int              `json:"incidents"`
 	LagDiscarded    int              `json:"lagDiscarded,omitempty"`
 	PingAvg         int              `json:"pingAvg,omitempty"`
+	PingMax         int              `json:"pingMax,omitempty"`
 	Hits            *core.HitProfile `json:"hits,omitempty"`
 }
 
@@ -199,6 +200,7 @@ func fillFromReport(e *Entry, rep *core.DemoReport) {
 			Incidents:       len(p.Incidents),
 			LagDiscarded:    p.LagDiscarded,
 			PingAvg:         p.PingAvg,
+			PingMax:         p.PingMax,
 			Hits:            p.Hits,
 		})
 	}

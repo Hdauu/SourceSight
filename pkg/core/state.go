@@ -180,6 +180,7 @@ type PlayerStats struct {
 	PingAvg             int                `json:"pingAvg,omitempty"`
 	PingMax             int                `json:"pingMax,omitempty"`
 	Hits                *HitProfile        `json:"hits,omitempty"`
+	Notes               []string           `json:"notes,omitempty"` // informative only, see notes.go
 	PreviousInfractions int                `json:"previousInfractions"`
 	PreviousNames       []string           `json:"previousNames"`
 	ChatMessages        []ChatMessageEntry `json:"chatMessages"`

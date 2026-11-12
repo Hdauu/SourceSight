@@ -82,6 +82,7 @@ type PlayerDetail struct {
 	} `json:"totals"`
 	Averages    Averages     `json:"averages"`
 	Global      Overview     `json:"global"`
+	Notes       []string     `json:"notes,omitempty"` // informative, see core/notes.go
 	Appearances []Appearance `json:"appearances"`
 }
 
@@ -290,11 +291,14 @@ func ListPlayers(query, steamID string) []PlayerRow {
 func GetPlayer(steamID string) *PlayerDetail {
 	d := &PlayerDetail{SteamID: steamID, FlagCounts: map[string]int{}}
 	var acc accum
+	var mine, others core.NoteCounts
 	for _, e := range all() {
 		for _, s := range e.Summaries {
 			if s.SteamID != steamID {
+				others.Add(s.noteCounts())
 				continue
 			}
+			mine.Add(s.noteCounts())
 			acc.add(s)
 			d.Demos++
 			d.Level = core.MaxLevel(d.Level, s.Level)
@@ -345,6 +349,7 @@ func GetPlayer(steamID string) *PlayerDetail {
 	}
 	sort.Slice(d.Appearances, func(i, j int) bool { return d.Appearances[i].AnalyzedAt > d.Appearances[j].AnalyzedAt })
 	d.Averages = acc.averages()
+	d.Notes = core.Notes(mine, others, "el resto de los jugadores del historial")
 	d.Global = GetOverview()
 	return d
 }
@@ -364,4 +369,18 @@ func anyContains(list []string, q string) bool {
 // history. Conduct issues (AFK, teamflash) are shown but not counted as flagged.
 func worthALook(level string) bool {
 	return level == core.LevelCheat || level == core.LevelSuspect
+}
+
+// noteCounts rebuilds the counts the observation rules need from a stored summary.
+func (s PlayerSummary) noteCounts() core.NoteCounts {
+	return core.CountsFromStats(&core.PlayerStats{
+		TriggerAvgMs:    s.TriggerAvgMs,
+		TriggerSamples:  s.TriggerSamples,
+		PeekEngagements: s.PeekEngagements,
+		Prefires:        s.Prefires,
+		PingAvg:         s.PingAvg,
+		PingMax:         s.PingMax,
+		LagDiscarded:    s.LagDiscarded,
+		Hits:            s.Hits,
+	})
 }
