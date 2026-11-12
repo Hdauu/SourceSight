@@ -199,3 +199,17 @@ td.player { color: var(--text); font-weight: 500; }
 .batch-counts:empty { display: none; }
 .batch-state { font-size: 12px; }
 .batch-state.active { color: var(--accent); }
+
+/* ── Body figure (js/16-body.js) ─────────────────────── */
+.body-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.body-controls select.input { width: auto; }
+.body-figs { display: flex; justify-content: center; gap: 12px; }
+.body-figs.two .body-fig { flex: 1 1 0; }
+.body-fig { margin: 0; max-width: 340px; width: 100%; display: flex; flex-direction: column; align-items: center; }
+.body-fig svg { width: 100%; height: auto; display: block; }
+.body-fig figcaption { font-size: 12px; color: var(--text-2); display: flex; gap: 8px; margin-top: 2px; }
+.body-fig .bz:hover > g:first-child { stroke: var(--accent); }
+.body-fig .bz-pct { font: 600 15px "Segoe UI", system-ui, sans-serif; fill: var(--text); }
+.body-fig .bz-name { font: 10.5px "Segoe UI", system-ui, sans-serif; fill: var(--muted); }
+.body-foot { font-size: 12px; margin-top: 8px; }
+.panel-body { padding: 14px 16px; }

@@ -55,6 +55,10 @@ function openPlayer(p) {
         hitStats(p) +
         '</div></div>';
 
+    if (p.hits) {
+        html += '<div><div class="block-title">Dónde pega</div><div id="pmFigure"></div></div>';
+    }
+
     const incs = p.incidents || [];
     if (incs.length && (currentReport.header.roundStarts || []).length) {
         html += '<div><div class="block-title">Incidentes por ronda</div><div class="chart" id="roundChart"></div></div>';
@@ -94,6 +98,14 @@ function openPlayer(p) {
     document.getElementById('pmBody').scrollTop = 0;
 
     if (document.getElementById('roundChart')) drawRoundChart(document.getElementById('roundChart'), incs);
+    const fig = document.getElementById('pmFigure');
+    if (fig) {
+        renderBodyPanel(fig, { mine: p.hits, mineLabel: 'En esta demo', mode: 'mine' });
+        // The general average arrives later; the figure gains the other two modes then
+        if (window.getOverview) window.getOverview().then(ov => {
+            if (ov && ov.averages && ov.averages.hits) renderBodyPanel(fig, { avg: ov.averages.hits });
+        });
+    }
     if (hasSteam && window.getPlayerDetail) {
         window.getPlayerDetail(sid).then(d => renderProfile(d));
     }

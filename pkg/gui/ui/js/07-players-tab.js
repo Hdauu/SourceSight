@@ -87,7 +87,9 @@ function showOverview() {
             '<div class="table-wrap"><table><thead><tr><th>Categoría</th><th class="r">Veces</th></tr></thead><tbody>' +
             (flags.length ? flags.map(f => '<tr><td>' + flagTag(f) + '</td><td class="r">' + ov.flagCounts[f] + '</td></tr>').join('')
                           : emptyRow(2, 'Todavía no hay detecciones en el historial.')) +
-            '</tbody></table></div></section>';
+            '</tbody></table></div></section>' +
+            '<section class="panel"><div class="panel-head"><div class="panel-title">Dónde pegan los jugadores</div><span class="muted">Impactos a enemigos en todas las demos</span></div><div class="panel-body" id="ovFigure"></div></section>';
+        renderBodyPanel(document.getElementById('ovFigure'), { avg: a.hits });
         showView('overview');
     });
 }
@@ -145,6 +147,7 @@ function openPlayerPage(steamId) {
                 compareRow('Wallhack por demo', a.wallPerDemo, g.wallPerDemo, '', true) +
                 compareRow('Incidentes por demo', a.incidentsPerDemo, g.incidentsPerDemo, '', true) +
             '</tbody></table></div></section>' +
+            '<section class="panel"><div class="panel-head"><div class="panel-title">Dónde pega</div><span class="muted">Impactos a enemigos en todas sus demos</span></div><div class="panel-body" id="ppFigure"></div></section>' +
             '<section class="panel"><div class="panel-head"><div class="panel-title">Demos <span class="count">' + d.demos + '</span></div><span class="muted">Click para abrir la demo</span></div>' +
             '<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Demo</th><th>Mapa</th><th class="r">Perfs</th><th class="r">Reacción</th><th class="r">Cabeza</th><th class="r">Snaps</th><th class="r">Wallhack</th><th class="r">Resultado</th></tr></thead><tbody>' +
             d.appearances.map(ap =>
@@ -161,6 +164,7 @@ function openPlayerPage(steamId) {
                 '</tr>'
             ).join('') +
             '</tbody></table></div></section>';
+        renderBodyPanel(document.getElementById('ppFigure'), { mine: a.hits, mineLabel: 'Este jugador', avg: g.hits, mode: 'compare' });
         showView('player');
     });
 }
