@@ -326,7 +326,7 @@ Cada bala que daña a un enemigo trae la zona del cuerpo donde pegó (*hit group
 
 Solo cuentan las balas a enemigos: cuchillo, granadas, fuego y zeus no cuentan.
 
-**La figura.** Es un dibujo propio de un soldado, con dos uniformes (CT con casco y chaleco, TT con pasamontañas y chaleco con bolsillos; botón **CT / TT**). Cada zona se pinta más naranja cuanto más le pega el jugador, y al lado tiene su %. La escala de color es fija (el 45 % de los impactos ya es color pleno), así que dos figuras lado a lado se comparan a simple vista. Los brazos y piernas son los del soldado, como si lo tuvieras de frente: su brazo izquierdo queda a tu derecha.
+**La figura.** Es una silueta lisa y minimalista, con cada zona como una pieza aparte. Cada zona se pinta según cuánto le pega el jugador, en una escala de calor de gris (nada) a naranja y amarillo claro (mucho), y al lado tiene su %. La escala es fija (el 45 % de los impactos ya es el color máximo) y tiene su barra de referencia debajo, así que dos figuras lado a lado se comparan a simple vista. Los brazos y piernas son los del soldado, como si lo tuvieras de frente: su brazo izquierdo queda a tu derecha.
 
 **Modos.**
 - **Jugador:** sus impactos en esa demo (detalle del jugador) o en todas sus demos (ficha del jugador).

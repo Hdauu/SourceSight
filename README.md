@@ -328,7 +328,7 @@ Every bullet that damages an enemy comes with the body zone it hit (*hit group*)
 
 Only bullets to enemies count: knife, grenades, fire and zeus don't.
 
-**The figure.** An original drawing of a soldier with two outfits (CT with helmet and vest, T with balaclava and pouch vest; **CT / TT** button). Each zone gets more orange the more the player hits it, with its % next to it. The color scale is fixed (45% of hits is already full color), so two figures side by side can be compared at a glance. Arms and legs are the soldier's own, as if facing them: their left arm is on your right.
+**The figure.** A flat, minimal silhouette with each zone as a separate piece. Each zone is colored by how much the player hits it, on a heat scale from grey (none) to orange and pale yellow (a lot), with its % next to it. The scale is fixed (45% of hits is already the top color) and has its reference bar underneath, so two figures side by side can be compared at a glance. Arms and legs are the soldier's own, as if facing them: their left arm is on your right.
 
 **Modes.**
 - **Player:** their hits in that demo (player detail) or across all their demos (player page).

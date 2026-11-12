@@ -1,5 +1,5 @@
 // ── Body figure: where a player's bullets land ────────────────────────
-// A 2D soldier (own drawing, CT or T gear) with each body zone shaded by its share
+// A minimal 2D silhouette with each body zone shaded by its share
 // of the hits, plus a table. Data comes from core.HitProfile (pkg/core/hits.go).
 //
 //   renderBodyPanel(host, { mine, mineLabel, avg, avgLabel, mode })
@@ -28,19 +28,17 @@ const BODY_WEAPONS = [
     ['pistol', 'Pistolas'], ['smg', 'SMG'], ['shotgun', 'Escopetas'], ['heavy', 'Ametralladoras']
 ];
 
-// Shapes, drawn around x = 180 in a 360 × 450 box with real proportions (about eight
-// heads tall). Right-side limbs (viewer's left) are drawn once; the left ones are the
-// same path mirrored. Zones are separate pieces with a thin gap between them, like a
-// hitbox chart.
+// Minimal silhouette, drawn around x = 180 in a 360 × 450 box: flat rounded pieces
+// with a small gap between them and no outlines, only the color of each zone.
+// Right-side limbs (viewer's left) are drawn once; the left ones are mirrored.
 const BODY_MIRROR = 'translate(360,0) scale(-1,1)';
 const BODY_SHAPES = {
-    head: '<ellipse cx="180" cy="42" rx="20" ry="25"/>',
-    neck: '<path d="M171 64 L189 64 L191 83 L169 83 Z"/>',
-    chest: '<path d="M150 82 C135 84 126 93 126 108 L139 166 L221 166 L234 108 C234 93 225 84 210 82 C196 79 164 79 150 82 Z"/>',
-    stomach: '<path d="M139 166 L221 166 L215 198 C219 208 222 220 218 232 C198 241 162 241 142 232 C138 220 141 208 145 198 Z"/>',
-    rightArm: '<path d="M126 90 C113 92 105 102 104 117 L101 160 C99 168 97 177 96 187 L93 229 C93 238 106 239 107 231 L112 190 C113 181 116 173 119 165 L125 126 Z"/>' +
-        '<ellipse cx="99" cy="244" rx="8" ry="11.5"/>',
-    rightLeg: '<path d="M144 233 C156 239 168 241 178 240 L176 300 C175 312 172 322 171 332 L169 396 L150 396 L148 332 C146 320 144 306 143 292 Z"/>'
+    head: '<circle cx="180" cy="44" r="22"/>',
+    neck: '<rect x="172" y="70" width="16" height="12" rx="4"/>',
+    chest: '<rect x="134" y="86" width="92" height="78" rx="18"/>',
+    stomach: '<rect x="140" y="168" width="80" height="62" rx="14"/>',
+    rightArm: '<rect x="104" y="88" width="24" height="152" rx="12" transform="rotate(8 116 88)"/>',
+    rightLeg: '<rect x="144" y="234" width="32" height="176" rx="15"/>'
 };
 BODY_SHAPES.leftArm = '<g transform="' + BODY_MIRROR + '">' + BODY_SHAPES.rightArm + '</g>';
 BODY_SHAPES.leftLeg = '<g transform="' + BODY_MIRROR + '">' + BODY_SHAPES.rightLeg + '</g>';
@@ -48,40 +46,15 @@ BODY_SHAPES.leftLeg = '<g transform="' + BODY_MIRROR + '">' + BODY_SHAPES.rightL
 // Where each percentage is written (text) and the point of the zone its line starts
 // from (at). Left column ends at x = 84, right column starts at x = 276.
 const BODY_LABELS = {
-    head: { at: [198, 34], text: [276, 40], end: false },
-    neck: { at: [172, 74], text: [84, 76], end: true },
-    chest: { at: [214, 118], text: [276, 120], end: false },
-    stomach: { at: [146, 204], text: [84, 170], end: true },
-    rightArm: { at: [103, 214], text: [84, 240], end: true },
-    leftArm: { at: [257, 214], text: [276, 240], end: false },
+    head: { at: [200, 40], text: [276, 44], end: false },
+    neck: { at: [173, 76], text: [84, 78], end: true },
+    chest: { at: [214, 120], text: [276, 122], end: false },
+    stomach: { at: [146, 200], text: [84, 180], end: true },
+    rightArm: { at: [101, 200], text: [84, 244], end: true },
+    leftArm: { at: [259, 200], text: [276, 244], end: false },
     rightLeg: { at: [160, 330], text: [84, 332], end: true },
     leftLeg: { at: [200, 330], text: [276, 332], end: false }
 };
-
-// Gear, drawn over the zones: dark and thin enough to keep their color readable.
-function bodyGear(team) {
-    const line = 'fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"';
-    const solid = 'fill="#000" fill-opacity="0.38"';
-    const boot = '<path d="M150 396 L169 396 L172 412 L139 412 C139 404 144 398 150 396 Z" fill="#1a1b1d" stroke="var(--border-strong)" stroke-width="1"/>';
-    const glove = '<ellipse cx="99" cy="244" rx="8" ry="11.5" ' + solid + '/>';
-    const both = boot + glove + '<g transform="' + BODY_MIRROR + '">' + boot + glove + '</g>';
-    if (team === 't') {
-        return both +
-            // Balaclava over the whole head, with the eye opening
-            '<ellipse cx="180" cy="42" rx="20" ry="25" ' + solid + '/>' +
-            '<rect x="166" y="34" width="28" height="8" rx="4" fill="var(--bg)" fill-opacity="0.9"/>' +
-            // Chest rig: crossed straps and a row of pouches
-            '<path d="M146 90 L214 162 M214 90 L146 162" ' + line + '/>' +
-            '<path d="M148 176 h18 v18 h-18 Z M171 176 h18 v18 h-18 Z M194 176 h18 v18 h-18 Z" ' + line + '/>';
-    }
-    return both +
-        // Helmet with a brim
-        '<path d="M160 40 C160 14 200 14 200 40 L205 44 L155 44 Z" fill="#1d2228" fill-opacity="0.85" stroke="#000" stroke-opacity="0.4" stroke-width="1"/>' +
-        // Plate carrier and belt
-        '<path d="M138 92 C160 87 200 87 222 92 L218 196 C200 204 160 204 142 196 Z" ' + line + '/>' +
-        '<path d="M160 104 h40 v42 h-40 Z" ' + line + '/>' +
-        '<path d="M139 214 C160 222 200 222 221 214" ' + line + '/>';
-}
 
 // Hits per zone for a weapon class; null when the profile has nothing for it.
 function bodyCounts(h, weapon) {
@@ -116,12 +89,12 @@ function heatColor(share) {
 let bodyFigSeq = 0;
 
 // One figure, with the color scale underneath.
-function bodySvg(c, team, title) {
+function bodySvg(c, title) {
     const gid = 'bodyHeat' + (++bodyFigSeq);
     const zone = key => {
         const share = c && c.total ? c.pct[key] : 0;
         const fill = c && c.total ? heatColor(share) : '#2a2c30';
-        return '<g class="bz" data-zone="' + key + '" fill="' + fill + '" stroke="var(--bg)" stroke-width="2.5" stroke-linejoin="round">' +
+        return '<g class="bz" data-zone="' + key + '" fill="' + fill + '">' +
             BODY_SHAPES[key] +
             '<title>' + BODY_ZONE_LABEL[key] + (c ? ': ' + ((c.zones[key] || {}).hits || 0) + ' impactos (' + fmtPct(share) + ')' : '') + '</title>' +
         '</g>';
@@ -131,10 +104,9 @@ function bodySvg(c, team, title) {
         const share = c && c.total ? c.pct[key] : null;
         const anchor = l.end ? 'end' : 'start';
         const lineEnd = l.end ? l.text[0] + 5 : l.text[0] - 5;
-        const color = share === null || share < 1 ? 'var(--muted)' : heatColor(Math.max(share, 15));
         return '<circle cx="' + l.at[0] + '" cy="' + l.at[1] + '" r="2" fill="var(--text)" fill-opacity="0.7"/>' +
-            '<polyline points="' + l.at.join(',') + ' ' + lineEnd + ',' + (l.text[1] - 5) + '" fill="none" stroke="var(--text)" stroke-opacity="0.28" stroke-width="1"/>' +
-            '<text x="' + l.text[0] + '" y="' + l.text[1] + '" text-anchor="' + anchor + '" class="bz-pct" fill="' + color + '">' +
+            '<polyline points="' + l.at.join(',') + ' ' + lineEnd + ',' + (l.text[1] - 5) + '" fill="none" stroke="var(--text)" stroke-opacity="0.25" stroke-width="1"/>' +
+            '<text x="' + l.text[0] + '" y="' + l.text[1] + '" text-anchor="' + anchor + '" class="bz-pct">' +
                 (share !== null ? fmtPct(share) : '–') + '</text>' +
             '<text x="' + l.text[0] + '" y="' + (l.text[1] + 13) + '" text-anchor="' + anchor + '" class="bz-name">' + BODY_ZONE_LABEL[key] + '</text>';
     };
@@ -147,7 +119,6 @@ function bodySvg(c, team, title) {
     return '<figure class="body-fig">' +
         '<svg viewBox="0 0 360 450" role="img" aria-label="' + esc(title) + '">' +
             order.map(zone).join('') +
-            '<g pointer-events="none">' + bodyGear(team) + '</g>' +
             Object.keys(BODY_LABELS).map(label).join('') +
             legend +
         '</svg>' +
@@ -190,9 +161,6 @@ function bodyTable(mine, avg, mode, st) {
     return '<div class="table-wrap"><table class="compare"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></div>' + foot;
 }
 
-let bodyTeam = 'ct';
-try { bodyTeam = localStorage.getItem('bodyTeam') === 't' ? 't' : 'ct'; } catch (e) { /* storage unavailable */ }
-
 function renderBodyPanel(host, opts) {
     if (!host) return;
     const st = host._body = Object.assign(host._body || { weapon: 'all' }, opts);
@@ -216,14 +184,13 @@ function renderBodyPanel(host, opts) {
         '<button class="' + (i[0] === cur ? 'on' : '') + '" data-v="' + i[0] + '" data-fn="' + fn + '">' + i[1] + '</button>').join('') + '</div>';
 
     let figs = '';
-    if (st.mode !== 'avg') figs += bodySvg(mine, bodyTeam, st.mineLabel || 'Jugador');
-    if (st.mode !== 'mine') figs += bodySvg(avg, bodyTeam, 'Promedio general');
+    if (st.mode !== 'avg') figs += bodySvg(mine, st.mineLabel || 'Jugador');
+    if (st.mode !== 'mine') figs += bodySvg(avg, 'Promedio general');
 
     host.innerHTML =
         '<div class="body-controls">' +
             (modes.length > 1 ? seg(modes, st.mode, 'mode') : '') +
             '<select class="input" data-fn="weapon" aria-label="Arma">' + weapons.map(w => '<option value="' + w[0] + '"' + (w[0] === st.weapon ? ' selected' : '') + '>' + w[1] + '</option>').join('') + '</select>' +
-            seg([['ct', 'CT'], ['t', 'TT']], bodyTeam, 'team') +
         '</div>' +
         '<div class="body-figs' + (st.mode === 'compare' ? ' two' : '') + '">' + figs + '</div>' +
         bodyTable(mine, avg, st.mode, st);
@@ -233,10 +200,6 @@ function renderBodyPanel(host, opts) {
         const apply = v => {
             if (fn === 'mode') st.mode = v;
             if (fn === 'weapon') st.weapon = v;
-            if (fn === 'team') {
-                bodyTeam = v;
-                try { localStorage.setItem('bodyTeam', v); } catch (e) { /* storage unavailable */ }
-            }
             renderBodyPanel(host, {});
         };
         if (el.tagName === 'SELECT') el.onchange = () => apply(el.value);
