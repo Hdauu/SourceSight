@@ -3,19 +3,8 @@ let playerRows = [];
 let activePlayer = null;
 let searchTimer = null;
 
-function setAsideTab(tab) {
-    asideTab = tab;
-    document.getElementById('tabDemos').classList.toggle('on', tab === 'demos');
-    document.getElementById('tabPlayers').classList.toggle('on', tab === 'players');
-    document.getElementById('paneDemos').style.display = tab === 'demos' ? 'flex' : 'none';
-    document.getElementById('panePlayers').style.display = tab === 'players' ? 'flex' : 'none';
-    if (tab === 'players') {
-        searchPlayers();
-        if (activePlayer) openPlayerPage(activePlayer); else showOverview();
-    } else {
-        restoreIdle();
-    }
-}
+// Kept for older callers: the rail does this now (20-sections.js)
+function setAsideTab(tab) { goSection(tab); }
 
 function searchPlayers() {
     clearTimeout(searchTimer);
@@ -97,12 +86,8 @@ function showOverview() {
 function openPlayerPage(steamId) {
     if (!window.getPlayerDetail) return;
     closePlayer();
-    if (asideTab !== 'players') {
-        asideTab = 'players';
-        document.getElementById('tabDemos').classList.remove('on');
-        document.getElementById('tabPlayers').classList.add('on');
-        document.getElementById('paneDemos').style.display = 'none';
-        document.getElementById('panePlayers').style.display = 'flex';
+    if (currentSection !== 'players') {
+        setChrome('players', 'player'); // show the players list right away
         searchPlayers();
     }
     activePlayer = steamId;
@@ -172,10 +157,5 @@ function openPlayerPage(steamId) {
 }
 
 function openDemoFromPlayer(entryId) {
-    asideTab = 'demos';
-    document.getElementById('tabDemos').classList.add('on');
-    document.getElementById('tabPlayers').classList.remove('on');
-    document.getElementById('paneDemos').style.display = 'flex';
-    document.getElementById('panePlayers').style.display = 'none';
-    openHistoryItem(entryId);
+    openHistoryItem(entryId); // the report opens in the Demos section
 }

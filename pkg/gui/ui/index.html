@@ -10,8 +10,9 @@
 </head>
 <body>
 
-    <header>
-        <div class="brand">
+    <!-- Sections (js/20-sections.js) -->
+    <nav class="rail" aria-label="Secciones">
+        <div class="rail-brand" title="SourceSight">
             <svg viewBox="0 0 24 24" aria-hidden="true">
                 <rect x="1" y="1" width="22" height="22" rx="5" fill="#1b1c1f" stroke="#2e3035"/>
                 <g fill="none" stroke="#ecebe6" stroke-width="1.7" stroke-linecap="round">
@@ -20,9 +21,19 @@
                 </g>
                 <circle cx="12" cy="12" r="1.8" fill="#e07b2a"/>
             </svg>
-            <span class="brand-name">SourceSight</span>
-            <span class="brand-ver" id="appVersion"></span>
         </div>
+        <button class="rail-item on" data-section="home" onclick="goSection('home')"><i data-icon="home"></i><span>Inicio</span></button>
+        <button class="rail-item" data-section="demos" onclick="goSection('demos')"><i data-icon="film"></i><span>Demos</span><b class="rail-badge" id="histCount"></b></button>
+        <button class="rail-item" data-section="players" onclick="goSection('players')"><i data-icon="users"></i><span>Jugadores</span></button>
+        <button class="rail-item" data-section="archive" onclick="goSection('archive')"><i data-icon="archive"></i><span>Archivo</span><b class="rail-dot" id="archiveDot"></b></button>
+        <div class="rail-spacer"></div>
+        <button class="rail-item" data-section="settings" onclick="goSection('settings')"><i data-icon="settings"></i><span>Ajustes</span></button>
+        <div class="rail-ver" id="appVersion"></div>
+    </nav>
+
+    <div class="shell">
+    <header>
+        <div class="page-name" id="pageName">Inicio</div>
 
         <div class="demo-meta" id="demoMeta"></div>
 
@@ -30,17 +41,17 @@
             <button class="btn" id="btnReanalyze" style="display:none;" onclick="reanalyze()" title="Volver a analizar esta demo">
                 <i data-icon="refresh"></i><span class="btn-label">Re-analizar</span>
             </button>
-            <button class="btn" id="btnPNG" style="display:none;" onclick="window.exportPNGReport()" title="Guardar el reporte como imagen">
-                <i data-icon="image"></i><span class="btn-label">PNG</span>
-            </button>
-            <button class="btn" id="btnSummary" style="display:none;" onclick="copyStaffSummary()" title="Copiar resumen en Markdown para Discord">
-                <i data-icon="copy"></i><span class="btn-label">Resumen</span>
-            </button>
+            <div class="menu-wrap" id="exportMenu" style="display:none;">
+                <button class="btn" onclick="toggleExportMenu(event)" title="Exportar el reporte">
+                    <i data-icon="file"></i><span class="btn-label">Exportar</span><span class="caret">▾</span>
+                </button>
+                <div class="menu" id="exportMenuList">
+                    <button onclick="closeExportMenu(); window.exportPNGReport()"><i data-icon="image"></i>Guardar como imagen (PNG)</button>
+                    <button onclick="closeExportMenu(); copyStaffSummary()"><i data-icon="copy"></i>Copiar resumen para Discord</button>
+                </div>
+            </div>
             <button class="btn btn-primary" onclick="pickDemos()">
                 <i data-icon="folder"></i><span class="btn-label">Abrir demos</span>
-            </button>
-            <button class="btn btn-plain btn-icon" onclick="openSettings()" title="Configuración">
-                <i data-icon="settings"></i>
             </button>
         </div>
     </header>
@@ -55,10 +66,6 @@
     <div class="layout">
         <aside id="aside">
             <div class="aside-resizer" id="asideResizer" role="separator" aria-orientation="vertical" aria-label="Ancho del panel" tabindex="0" title="Arrastrá para cambiar el ancho (doble click: volver al normal)"></div>
-            <div class="aside-tabs" role="tablist">
-                <button class="on" id="tabDemos" role="tab" onclick="setAsideTab('demos')">Demos <span class="num" id="histCount"></span></button>
-                <button id="tabPlayers" role="tab" onclick="setAsideTab('players')">Jugadores</button>
-            </div>
 
             <div class="aside-pane" id="paneDemos">
                 <div class="aside-search">
@@ -131,6 +138,162 @@
                                 </thead>
                                 <tbody id="batchBody"></tbody>
                             </table>
+                        </div>
+                    </section>
+                </div>
+
+
+                <!-- Inicio (js/20-sections.js) -->
+                <div id="homeView" style="display:none; flex-direction:column; gap:16px;"></div>
+
+                <!-- Archivo automático -->
+                <div id="archiveView" style="display:none; flex-direction:column; gap:16px;">
+                    <div class="page-head">
+                        <div>
+                            <div class="page-title">Archivo automático</div>
+                            <div class="page-sub">Baja las demos nuevas del servidor, las analiza y guarda solo las que tienen un jugador marcado como cheat o sospechoso.</div>
+                        </div>
+                    </div>
+                    <div class="summary" id="archiveSummary"></div>
+                    <section class="panel">
+                        <div class="panel-head"><div class="panel-title">Configuración del archivo</div></div>
+                        <div class="panel-body">
+                            <!-- Automatic archive of the server's demos (js/11-settings.js, pkg/archive) -->
+                            <div class="field archive-field">
+                                <label class="check" style="font-weight:600;"><input type="checkbox" id="arcEnabled"> Archivo automático de demos del servidor</label>
+                                <div class="help">Revisa la página de demos, analiza las nuevas y guarda solo las que tengan un jugador marcado como cheat o sospechoso. Las demás se borran después de analizarlas (quedan en el historial). Conviene activarlo en una sola PC.</div>
+                                <div id="arcOptions">
+                                    <label for="arcDir">Carpeta donde guardar las demos</label>
+                                    <input class="input mono" id="arcDir" placeholder="D:\demos">
+                                    <label>Servidores <span class="muted">(ninguno marcado = todos)</span></label>
+                                    <div class="checks" id="arcServers"></div>
+                                    <label>Modos <span class="muted">(ninguno marcado = todos)</span></label>
+                                    <div class="checks" id="arcModes"></div>
+                                    <label for="arcMaps">Mapas <span class="muted">(separados por coma; vacío = todos)</span></label>
+                                    <input class="input mono" id="arcMaps" placeholder="de_mirage, de_dust2, de_nuke">
+                                    <label for="arcEvery">Revisar cada</label>
+                                    <select class="input" id="arcEvery">
+                                        <option value="30">30 minutos</option>
+                                        <option value="60" selected>1 hora</option>
+                                        <option value="120">2 horas</option>
+                                        <option value="240">4 horas</option>
+                                    </select>
+                                    <label for="arcURL">Página de demos</label>
+                                    <input class="input mono" id="arcURL" placeholder="https://csgo.3y33.com.ar/demos">
+                                    <div class="arc-status">
+                                        <span class="muted" id="arcStatus"></span>
+                                        <button class="btn" onclick="runArchiveNowClick()">Revisar ahora</button>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="page-actions">
+                                <button class="btn btn-primary" onclick="saveArchiveSettings()">Guardar</button>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="panel">
+                        <div class="panel-head">
+                            <div class="panel-title">Demos guardadas <span class="count" id="archivedCount"></span></div>
+                            <span class="muted">Click para abrir el reporte</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>Demo</th><th>Mapa</th><th>Resultado</th><th class="r">Tamaño</th><th class="r">Guardada</th></tr></thead>
+                                <tbody id="archivedBody"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Configuración -->
+                <div id="settingsView" style="display:none; flex-direction:column; gap:16px;">
+                    <div class="page-head">
+                        <div>
+                            <div class="page-title">Ajustes</div>
+                            <div class="page-sub">Se guardan en esta PC.</div>
+                        </div>
+                    </div>
+                    <section class="panel">
+                        <div class="panel-head"><div class="panel-title">Juego</div></div>
+                        <div class="panel-body">
+                            <div class="field">
+                                <label for="cfgCSGOPath">Carpeta de CS:GO</label>
+                                <div style="display:flex; gap:6px;">
+                                    <input class="input mono" id="cfgCSGOPath" placeholder="C:\Program Files (x86)\Steam\steamapps\common\csgo legacy\csgo">
+                                    <button class="btn" onclick="browseCSGO()">Buscar</button>
+                                </div>
+                                <div class="help">Se usa para abrir cada incidente directamente en el juego.</div>
+                            </div>
+
+                            <div class="field">
+                                <label for="cfgPreroll">Segundos antes de la jugada</label>
+                                <select class="input" id="cfgPreroll">
+                                    <option value="1.5">1,5 s</option>
+                                    <option value="2.5" selected>2,5 s</option>
+                                    <option value="4.0">4 s</option>
+                                    <option value="6.0">6 s</option>
+                                </select>
+                            </div>
+
+                        </div>
+                    </section>
+                    <section class="panel">
+                        <div class="panel-head"><div class="panel-title">Revisión</div></div>
+                        <div class="panel-body">
+                            <div class="field">
+                                <label for="cfgHotkeys">Teclas para ir al incidente anterior / siguiente</label>
+                                <select class="input" id="cfgHotkeys">
+                                    <option value="ctrl-alt-arrows">Ctrl + Alt + ← / →</option>
+                                    <option value="ctrl-shift-arrows">Ctrl + Shift + ← / →</option>
+                                    <option value="ctrl-alt-pages">Ctrl + Alt + Re Pág / Av Pág</option>
+                                    <option value="alt-pages">Alt + Re Pág / Av Pág</option>
+                                    <option value="off">Desactivadas</option>
+                                </select>
+                                <div class="help">Funcionan con el juego en primer plano. Recorren los incidentes desde el último que abriste con Ver: los del mismo jugador, o todos los de la demo.</div>
+                            </div>
+
+                            <div class="field">
+                                <label for="cfgShiftRadius">Registro de SHIFT: distancia del enemigo</label>
+                                <select class="input" id="cfgShiftRadius">
+                                    <option value="500">500 unidades</option>
+                                    <option value="750">750 unidades</option>
+                                    <option value="1000" selected>1000 unidades (recomendado)</option>
+                                    <option value="1500">1500 unidades</option>
+                                    <option value="2000">2000 unidades</option>
+                                </select>
+                                <div class="help">Un enemigo que no se ve a esta distancia o menos cuenta como cerca. Se aplica a las demos que analices o re-analices después de cambiarlo.</div>
+                            </div>
+
+                        </div>
+                    </section>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="saveSettings()">Guardar ajustes</button>
+                    </div>
+                    <section class="panel">
+                        <div class="panel-head"><div class="panel-title">Umbrales de detección</div><span class="muted">El detalle de cada uno está en el README</span></div>
+                        <div class="panel-body">
+                            <dl class="kv">
+                                <dt>Autobunny</dt><dd>75% de perfs o más en al menos 10 saltos. Con 30 saltos o más, 55% o 5 perfs seguidos queda como sospechoso</dd>
+                                <dt>Triggerbot</dt><dd>reacción media menor a 80 ms con desvío menor a 15 ms</dd>
+                                <dt>Aimlock / spinbot</dt><dd>Giros de más de 45° en un tick, varios dentro de 1 segundo: 50 o más en la partida es cheat, de 10 a 49 es sospechoso</dd>
+                                <dt>Wallhack</dt><dd>seguir con la mira a un enemigo oculto durante 1 s y 20° de recorrido, 3 veces</dd>
+                                <dt>Silent aim</dt><dd>3 impactos con más de 35° de diferencia entre la mira y el daño</dd>
+                            </dl>
+                        </div>
+                    </section>
+                    <section class="panel">
+                        <div class="panel-head"><div class="panel-title">Acerca de</div></div>
+                        <div class="panel-body">
+                            <dl class="kv">
+                                <dt>Versión</dt><dd id="aboutVersion"></dd>
+                                <dt>Código fuente</dt><dd><a class="link" id="aboutRepo" onclick="openRepo()"></a></dd>
+                                <dt>Exportaciones</dt><dd><a class="link" onclick="window.openExportFolder()">Documentos\SourceSight</a></dd>
+                            </dl>
+                            <div style="margin-top:10px;">
+                                <button class="btn" onclick="checkUpdates(true)"><i data-icon="refresh"></i>Buscar actualizaciones</button>
+                            </div>
                         </div>
                     </section>
                 </div>
@@ -339,6 +502,7 @@
             </div>
         </main>
     </div>
+    </div><!-- /shell -->
 
     <!-- Player detail -->
     <div class="overlay" id="playerModal" onclick="closePlayer()">
@@ -351,121 +515,6 @@
                 <div class="modal-actions" id="pmActions"></div>
             </div>
             <div class="modal-body" id="pmBody"></div>
-        </div>
-    </div>
-
-    <!-- Settings -->
-    <div class="overlay" id="settingsModal" onclick="closeSettings()">
-        <div class="modal" style="width:600px;" onclick="event.stopPropagation()">
-            <div class="modal-head">
-                <div class="modal-title">Configuración</div>
-                <button class="btn btn-plain btn-icon" onclick="closeSettings()" title="Cerrar"><i data-icon="x"></i></button>
-            </div>
-            <div class="modal-body">
-                <div class="field">
-                    <label for="cfgCSGOPath">Carpeta de CS:GO</label>
-                    <div style="display:flex; gap:6px;">
-                        <input class="input mono" id="cfgCSGOPath" placeholder="C:\Program Files (x86)\Steam\steamapps\common\csgo legacy\csgo">
-                        <button class="btn" onclick="browseCSGO()">Buscar</button>
-                    </div>
-                    <div class="help">Se usa para abrir cada incidente directamente en el juego.</div>
-                </div>
-
-                <div class="field">
-                    <label for="cfgPreroll">Segundos antes de la jugada</label>
-                    <select class="input" id="cfgPreroll">
-                        <option value="1.5">1,5 s</option>
-                        <option value="2.5" selected>2,5 s</option>
-                        <option value="4.0">4 s</option>
-                        <option value="6.0">6 s</option>
-                    </select>
-                </div>
-
-                <div class="field">
-                    <label for="cfgHotkeys">Teclas para ir al incidente anterior / siguiente</label>
-                    <select class="input" id="cfgHotkeys">
-                        <option value="ctrl-alt-arrows">Ctrl + Alt + ← / →</option>
-                        <option value="ctrl-shift-arrows">Ctrl + Shift + ← / →</option>
-                        <option value="ctrl-alt-pages">Ctrl + Alt + Re Pág / Av Pág</option>
-                        <option value="alt-pages">Alt + Re Pág / Av Pág</option>
-                        <option value="off">Desactivadas</option>
-                    </select>
-                    <div class="help">Funcionan con el juego en primer plano. Recorren los incidentes desde el último que abriste con Ver: los del mismo jugador, o todos los de la demo.</div>
-                </div>
-
-                <div class="field">
-                    <label for="cfgShiftRadius">Registro de SHIFT: distancia del enemigo</label>
-                    <select class="input" id="cfgShiftRadius">
-                        <option value="500">500 unidades</option>
-                        <option value="750">750 unidades</option>
-                        <option value="1000" selected>1000 unidades (recomendado)</option>
-                        <option value="1500">1500 unidades</option>
-                        <option value="2000">2000 unidades</option>
-                    </select>
-                    <div class="help">Un enemigo que no se ve a esta distancia o menos cuenta como cerca. Se aplica a las demos que analices o re-analices después de cambiarlo.</div>
-                </div>
-
-                <!-- Automatic archive of the server's demos (js/11-settings.js, pkg/archive) -->
-                <div class="field archive-field">
-                    <label class="check" style="font-weight:600;"><input type="checkbox" id="arcEnabled"> Archivo automático de demos del servidor</label>
-                    <div class="help">Revisa la página de demos, analiza las nuevas y guarda solo las que tengan un jugador marcado como cheat o sospechoso. Las demás se borran después de analizarlas (quedan en el historial). Conviene activarlo en una sola PC.</div>
-                    <div id="arcOptions">
-                        <label for="arcDir">Carpeta donde guardar las demos</label>
-                        <input class="input mono" id="arcDir" placeholder="D:\demos">
-                        <label>Servidores <span class="muted">(ninguno marcado = todos)</span></label>
-                        <div class="checks" id="arcServers"></div>
-                        <label>Modos <span class="muted">(ninguno marcado = todos)</span></label>
-                        <div class="checks" id="arcModes"></div>
-                        <label for="arcMaps">Mapas <span class="muted">(separados por coma; vacío = todos)</span></label>
-                        <input class="input mono" id="arcMaps" placeholder="de_mirage, de_dust2, de_nuke">
-                        <label for="arcEvery">Revisar cada</label>
-                        <select class="input" id="arcEvery">
-                            <option value="30">30 minutos</option>
-                            <option value="60" selected>1 hora</option>
-                            <option value="120">2 horas</option>
-                            <option value="240">4 horas</option>
-                        </select>
-                        <label for="arcURL">Página de demos</label>
-                        <input class="input mono" id="arcURL" placeholder="https://csgo.3y33.com.ar/demos">
-                        <div class="arc-status">
-                            <span class="muted" id="arcStatus"></span>
-                            <button class="btn" onclick="runArchiveNowClick()">Revisar ahora</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="display:flex; justify-content:flex-end; gap:6px;">
-                    <button class="btn" onclick="closeSettings()">Cancelar</button>
-                    <button class="btn btn-primary" onclick="saveSettings()">Guardar</button>
-                </div>
-
-                <div class="divider"></div>
-
-                <div>
-                    <div class="block-title">Umbrales de detección</div>
-                    <dl class="kv">
-                        <dt>Autobunny</dt><dd>75% de perfs o más en al menos 10 saltos. Con 30 saltos o más, 55% o 5 perfs seguidos queda como sospechoso</dd>
-                        <dt>Triggerbot</dt><dd>reacción media menor a 80 ms con desvío menor a 15 ms</dd>
-                        <dt>Aimlock / spinbot</dt><dd>Giros de más de 45° en un tick, varios dentro de 1 segundo: 50 o más en la partida es cheat, de 10 a 49 es sospechoso</dd>
-                        <dt>Wallhack</dt><dd>seguir con la mira a un enemigo oculto durante 1 s y 20° de recorrido, 3 veces</dd>
-                        <dt>Silent aim</dt><dd>3 impactos con más de 35° de diferencia entre la mira y el daño</dd>
-                    </dl>
-                </div>
-
-                <div class="divider"></div>
-
-                <div>
-                    <div class="block-title">Acerca de</div>
-                    <dl class="kv">
-                        <dt>Versión</dt><dd id="aboutVersion"></dd>
-                        <dt>Código fuente</dt><dd><a class="link" id="aboutRepo" onclick="openRepo()"></a></dd>
-                        <dt>Exportaciones</dt><dd><a class="link" onclick="window.openExportFolder()">Documentos\SourceSight</a></dd>
-                    </dl>
-                    <div style="margin-top:10px;">
-                        <button class="btn" onclick="checkUpdates(true)"><i data-icon="refresh"></i>Buscar actualizaciones</button>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 

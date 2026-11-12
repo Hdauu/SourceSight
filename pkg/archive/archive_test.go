@@ -93,6 +93,9 @@ func TestRunKeepsOnlyFlaggedDemos(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "cheat.dem")); err != nil {
 		t.Fatal("flagged demo not kept")
 	}
+	if k := Kept(); len(k) != 1 || k[0].File != "cheat.dem" || k[0].Level != core.LevelCheat {
+		t.Fatalf("kept list = %+v", k)
+	}
 	if _, err := os.Stat(filepath.Join(dir, "clean.dem")); err == nil {
 		t.Fatal("clean demo kept")
 	}

@@ -19,6 +19,7 @@ function notifyReady() {
             try {
                 const w = JSON.parse(s).sidebarWidth;
                 if (w) setAsideWidth(w, false);
+                updateArchiveDot(JSON.parse(s).archive || {});
             } catch (e) {}
         });
     }
@@ -26,6 +27,7 @@ function notifyReady() {
     const confirmed = new Promise(resolve => refreshConfirmed(resolve));
     Promise.all([levels, confirmed]).finally(() => {
         refreshHistory();
+        if (!currentReport) goSection('home');
         if (window.onAppReady) window.onAppReady();
     });
     setTimeout(() => checkUpdates(false), 1500);

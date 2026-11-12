@@ -28,6 +28,7 @@ The app itself is in Spanish; this document describes it in English.
 - [Install](#install)
 - [Quick start](#quick-start)
 - [How a demo is analyzed](#how-a-demo-is-analyzed)
+- [How the app is organized](#how-the-app-is-organized)
 - [A demo report](#a-demo-report)
 - [Levels](#levels)
 - [Detections](#detections)
@@ -69,7 +70,7 @@ Requires the WebView2 runtime, which ships with Windows 10 and 11.
 3. Click a player to see their metrics, where they hit, their incidents per round and the **Ver** (watch) button of each one.
 4. The **Jugadores** (players) tab adds each player up across all your demos and compares them with everyone else.
 
-To use **Ver**, set the CS:GO folder once in Settings (icon at the top right).
+To use **Ver**, set the CS:GO folder once in **Ajustes** (settings, bottom left of the menu).
 
 ## How a demo is analyzed
 
@@ -86,6 +87,18 @@ A 35-minute demo at 128 tick (about 270,000 ticks) takes 4 to 8 seconds.
 - At the end there is a summary ("2 con cheat · 1 sospechosa · 5 limpias…").
 
 Measured with 12 real demos on a 12-thread CPU: 62 s one by one, 11 s in parallel. Reports come out identical either way, and a test checks it.
+
+## How the app is organized
+
+On the left, a menu with the sections:
+
+- **Inicio** (home): what's worth reviewing first. The latest demos with cheats or suspects, the history totals, the automatic archive status and a notice if there are demos to re-analyze.
+- **Demos:** the history on the left (search, filter by level or category) and the chosen demo's report on the right.
+- **Jugadores** (players): the list of players across your demos and each one's page. With no player chosen it shows "Todas las demos", with totals and how everyone hits on average.
+- **Archivo** (archive): the automatic archive of the server's demos: status, settings and the list of demos it kept.
+- **Ajustes** (settings): game folder, seconds before the play, incident hotkeys, SHIFT log distance, thresholds and version.
+
+On top, when a demo is open: its map, file and server, **Re-analizar** (re-analyze) and **Exportar** (export: PNG image or summary for Discord). **Abrir demos** (open demos) is always there. Demos can be dropped anywhere on the window.
 
 ## A demo report
 
@@ -424,7 +437,7 @@ They appear in the player detail, the player page and the Discord bot's message.
 - In a player's detail, a box with how many cases they had and a **Ver en el registro** button that opens the list filtered to them.
 - The Discord bot shows a summary: how many cases and the players with the most.
 
-**Distance.** Changed in **Settings** (500, 750, 1000, 1500 or 2000 units) and in the bot with `shiftRadius` in `bot_config.json`. It applies to demos analyzed or re-analyzed after changing it.
+**Distance.** Changed in **Ajustes** (settings) (500, 750, 1000, 1500 or 2000 units) and in the bot with `shiftRadius` in `bot_config.json`. It applies to demos analyzed or re-analyzed after changing it.
 
 **What to expect.** Normal matches have many cases: across 25 real demos there were from a few dozen to about 300 per match, and up to about 45 per player. What's worth watching is a player who walks with shift **straight toward** an enemy they can't see, again and again, or stops right behind a wall where someone is.
 
@@ -436,7 +449,7 @@ They appear in the player detail, the player page and the Discord bot's message.
 
 **What it is.** The match drawn on the map's radar, in each demo report (the **"Mapa"** section).
 
-**Where the radar comes from.** From **your installed CS:GO**: the radar image and its position file are in `csgo\resource\overviews`. SourceSight ships no Valve images: it reads them from your game, converts them to PNG once and keeps them in `%APPDATA%\SourceSight\radar`. That's why the CS:GO folder must be set in Settings (otherwise it tries to find it on its own). Maps with several floors (like Nuke) have an **Arriba / Abajo** (upper / lower) selector, and each point goes on the floor that matches its height.
+**Where the radar comes from.** From **your installed CS:GO**: the radar image and its position file are in `csgo\resource\overviews`. SourceSight ships no Valve images: it reads them from your game, converts them to PNG once and keeps them in `%APPDATA%\SourceSight\radar`. That's why the CS:GO folder must be set in **Ajustes** (settings) (otherwise it tries to find it on its own). Maps with several floors (like Nuke) have an **Arriba / Abajo** (upper / lower) selector, and each point goes on the floor that matches its height.
 
 **What the analysis stores.**
 - Every kill, with the exact position of killer and victim, the weapon and whether it was a headshot.
@@ -515,7 +528,7 @@ Each incident's **Ver** button opens CS:GO at that moment of the demo:
 2. If CS:GO is already open and SourceSight started it, the demo is sent through its remote console (`-netconport 2121`). If it's the demo already playing, it just jumps to the tick.
 3. If it isn't open, it's started through Steam (`steam.exe -applaunch <id>`, with the App ID read from Steam's files). It waits for the main menu, loads the demo with `playdemo` and, once the map has loaded, jumps with `demo_gototick`.
 
-It jumps a few seconds before the play (configurable in Settings, 2.5 s by default), converted to ticks with the demo's tickrate.
+It jumps a few seconds before the play (configurable in **Ajustes** (settings), 2.5 s by default), converted to ticks with the demo's tickrate.
 
 If CS:GO is open but you started it yourself from Steam, it has no remote console: close it once and press Ver again, or add `-netconport 2121` to its launch options.
 
@@ -524,7 +537,7 @@ Every incident also has its `demo_gototick` command to copy and paste by hand.
 
 **First-person camera.** When the moment belongs to a player (an incident, a SHIFT case, a kill on the minimap, a chat message), after seeking the app sends the game `spec_player_by_accountid` with the player's account number (from their SteamID) and `spec_mode 4`: the demo watches from their eyes. The game console shows a `SourceSight: …` line with which incident it is.
 
-**Previous / next incident.** With the game in front, **Ctrl + Alt + ←** and **Ctrl + Alt + →** jump to the previous or next incident, also in first person. They walk the list of the last **Ver** you pressed: that player's incidents, or every incident of the demo if the moment wasn't a player's. They are Windows global hotkeys received by SourceSight and forwarded to the game through the remote console: no bind or game file is touched. They can be changed in Settings (Ctrl + Shift + arrows, Ctrl + Alt + Page Up / Page Down, Alt + Page Up / Page Down) or turned off. Function keys aren't used because CS:GO already uses several (F10 opens the quit dialog).
+**Previous / next incident.** With the game in front, **Ctrl + Alt + ←** and **Ctrl + Alt + →** jump to the previous or next incident, also in first person. They walk the list of the last **Ver** you pressed: that player's incidents, or every incident of the demo if the moment wasn't a player's. They are Windows global hotkeys received by SourceSight and forwarded to the game through the remote console: no bind or game file is touched. They can be changed in **Ajustes** (settings) (Ctrl + Shift + arrows, Ctrl + Alt + Page Up / Page Down, Alt + Page Up / Page Down) or turned off. Function keys aren't used because CS:GO already uses several (F10 opens the quit dialog).
 
 **Safety.** Anyone picks their player name, so before a name is shown in the game console `;`, quotes and backslashes are removed: a name can't sneak commands in.
 
@@ -547,7 +560,7 @@ Every incident also has its `demo_gototick` command to copy and paste by hand.
 **Internet data.** Downloading doesn't take disk, but it does use internet: downloading everything would be about 15 GB a day on 3y33. That's what the filters are for; for example, Competitivo only downloads much less.
 
 **Settings.**
-- **App:** Settings → "Archivo automático de demos del servidor": folder, servers, modes, maps, how often to check, demo page and the **Revisar ahora** (check now) button, with the result of the last check.
+- **App:** the **Archivo** (archive) section of the menu: folder, servers, modes, maps, how often to check, demo page and the **Revisar ahora** (check now) button, with the result of the last check.
 - **Bot:** in `bot_config.json`, `archive` (`enabled`, `dir`, `servers`, `modes`, `maps`, `minMB`, `everyMin`, `url`) and `archiveChannelId`, the channel where each kept demo is announced (if missing, the first of `channelIds`).
 
 **Limits.** It reads the page the way a browser sees it: if the site changes its layout, the reader (`ParsePage`) has to be adapted. It only works with pages that allow downloading demos without logging in.

@@ -8,7 +8,6 @@ function refreshHistory() {
 }
 
 let histFilter = 'all';
-let asideTab = 'demos';
 
 function setHistFilter(f, el) {
     histFilter = f;
@@ -79,6 +78,6 @@ function openHistoryItem(id) {
 function removeHistoryItem(id) {
     if (window.removeHistory) window.removeHistory(id).then(() => {
         refreshHistory();
-        if (asideTab === 'players') { searchPlayers(); showOverview(); }
+        if (currentSection === 'players') { searchPlayers(); showOverview(); }
     });
 }

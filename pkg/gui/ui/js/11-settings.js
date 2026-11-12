@@ -7,16 +7,14 @@ function openSettings() {
                 if (cfg.csgoPath) document.getElementById('cfgCSGOPath').value = cfg.csgoPath;
                 if (cfg.prerollSeconds) document.getElementById('cfgPreroll').value = cfg.prerollSeconds.toFixed(1);
                 document.getElementById('cfgShiftRadius').value = String(cfg.shiftRadius || 1000);
-                fillArchive(cfg.archive || {});
                 document.getElementById('cfgHotkeys').value = cfg.hotkeys || 'ctrl-alt-arrows';
             } catch (e) {}
         });
     }
-    document.getElementById('settingsModal').style.display = 'flex';
-    refreshArchiveStatus();
 }
 
-function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+// Settings is a page now; "closing" it goes home
+function closeSettings() { goSection('home'); }
 
 function browseCSGO() {
     if (!window.browseCSGOPath) return;
@@ -29,12 +27,10 @@ function saveSettings() {
     const shiftRadius = parseFloat(document.getElementById('cfgShiftRadius').value) || 1000;
     if (!window.saveConfig) { closeSettings(); return; }
     window.saveConfig(p, preroll, shiftRadius)
-        .then(saved => window.saveArchiveConfig ? window.saveArchiveConfig(readArchive()).then(() => saved) : saved)
         .then(saved => window.saveHotkeys ? window.saveHotkeys(document.getElementById('cfgHotkeys').value).then(() => saved) : saved)
         .then(saved => {
             if (saved) document.getElementById('cfgCSGOPath').value = saved;
-            showToast(saved ? 'Guardado. Carpeta del juego: ' + saved : 'Configuración guardada');
-            closeSettings();
+            showToast(saved ? 'Guardado. Carpeta del juego: ' + saved : 'Ajustes guardados');
         })
         .catch(err => showToast('No se pudo guardar: ' + (err && err.message ? err.message : err)));
 }
@@ -110,7 +106,7 @@ function refreshArchiveStatus() {
     window.getArchiveStatus().then(s => {
         document.getElementById('arcStatus').innerText = s.running ? 'Revisando la página de demos…'
             : s.lastRun ? 'Última revisión: ' + s.lastRun + '. ' + (s.lastNote || '') : 'Todavía no revisó en esta sesión.';
-        if (document.getElementById('settingsModal').style.display === 'flex') setTimeout(refreshArchiveStatus, 3000);
+        if (currentSection === 'archive') setTimeout(refreshArchiveStatus, 3000);
     });
 }
 
@@ -121,4 +117,75 @@ function runArchiveNowClick() {
         .then(() => window.runArchiveNow())
         .then(() => { showToast('Revisando la página de demos…'); refreshArchiveStatus(); })
         .catch(err => showToast('No se pudo: ' + (err && err.message ? err.message : err)));
+}
+
+// ── Archive page (Archivo in the rail) ──
+function renderArchivePage() {
+    if (window.getConfig) window.getConfig().then(s => {
+        let cfg = {};
+        try { cfg = JSON.parse(s); } catch (e) { /* defaults */ }
+        fillArchive(cfg.archive || {});
+        updateArchiveDot(cfg.archive || {});
+    });
+    refreshArchiveStatus();
+    renderArchiveSummary();
+    renderArchived();
+}
+
+function renderArchiveSummary() {
+    if (!window.getArchiveStatus) return;
+    window.getArchiveStatus().then(st => {
+        const box = document.getElementById('archiveSummary');
+        box.innerHTML =
+            '<div class="sum-cell"><div class="sum-label">Estado</div><div class="sum-value" style="font-size:16px;">' + (st.running ? 'Revisando…' : document.getElementById('arcEnabled').checked ? 'Activo' : 'Apagado') + '</div>' +
+                '<div class="sum-sub">' + (st.lastRun ? 'última revisión ' + esc(st.lastRun) : 'sin revisiones en esta sesión') + '</div></div>' +
+            '<div class="sum-cell"><div class="sum-label">Analizadas</div><div class="sum-value">' + (st.analyzed || 0) + '</div><div class="sum-sub">en esta sesión</div></div>' +
+            '<div class="sum-cell"><div class="sum-label">Guardadas</div><div class="sum-value">' + (st.kept || 0) + '</div><div class="sum-sub">en esta sesión, con cheat o sospechosos</div></div>';
+    });
+}
+
+function renderArchived() {
+    if (!window.listArchived) return;
+    window.listArchived().then(rows => {
+        rows = rows || [];
+        document.getElementById('archivedCount').innerText = rows.length || '';
+        const body = document.getElementById('archivedBody');
+        if (!rows.length) {
+            body.innerHTML = emptyRow(5, 'Todavía no se guardó ninguna demo.');
+            return;
+        }
+        body.innerHTML = rows.map(r => {
+            const d = r.demo;
+            const open = r.historyId ? 'openHistoryItem(\'' + esc(r.historyId) + '\')' : 'openArchivedPath(' + JSON.stringify(d.path).replace(/"/g, '&quot;') + ')';
+            return '<tr class="click" onclick="' + open + '">' +
+                '<td class="player">' + esc(d.file) + '<div class="muted" style="font-size:12px;">#' + d.server + ' ' + esc(d.mode || '') + '</div></td>' +
+                '<td class="muted">' + esc(d.map || '') + '</td>' +
+                '<td>' + levelTag(d.level) + ' <span class="tags">' + (d.flags || []).map(flagTag).join('') + '</span></td>' +
+                '<td class="r num">' + Math.round(d.sizeMB || 0) + ' MB</td>' +
+                '<td class="r muted">' + fmtDate((d.at || '').slice(0, 10)) + '</td>' +
+            '</tr>';
+        }).join('');
+    });
+}
+
+function openArchivedPath(path) {
+    if (window.openDemoPath) window.openDemoPath(path);
+}
+
+function saveArchiveSettings() {
+    if (!window.saveArchiveConfig) return;
+    const cfg = readArchive();
+    window.saveArchiveConfig(cfg)
+        .then(saved => {
+            fillArchive(saved || cfg);
+            updateArchiveDot(saved || cfg);
+            renderArchiveSummary();
+            showToast(cfg.enabled ? 'Archivo automático activado' : 'Archivo automático apagado');
+        })
+        .catch(err => showToast('No se pudo guardar: ' + (err && err.message ? err.message : err)));
+}
+
+// Small dot on the rail when the archive is on
+function updateArchiveDot(a) {
+    document.getElementById('archiveDot').style.display = a && a.enabled ? 'block' : 'none';
 }

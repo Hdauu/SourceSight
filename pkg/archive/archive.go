@@ -343,6 +343,9 @@ func Run(ctx context.Context, c Config, analyze Analyze, onResult func(Result)) 
 			already[d.File] = time.Now()
 			already.save()
 		}
+		if res.Err == nil && res.Kept && res.Level != "" {
+			recordKept(res)
+		}
 		if onResult != nil {
 			onResult(res)
 		}
@@ -386,4 +389,56 @@ func handle(ctx context.Context, c Config, d Demo, analyze Analyze) Result {
 		_ = os.Remove(dst)
 	}
 	return res
+}
+
+// KeptDemo is one demo the archive kept, for the list in the app.
+type KeptDemo struct {
+	File   string    `json:"file"`
+	Path   string    `json:"path"`
+	Level  string    `json:"level"`
+	Flags  []string  `json:"flags,omitempty"`
+	Server int       `json:"server"`
+	Mode   string    `json:"mode"`
+	Map    string    `json:"map"`
+	SizeMB float64   `json:"sizeMB"`
+	At     time.Time `json:"at"`
+}
+
+func keptPath() string { return appdata.Path("archive_kept.json") }
+
+// recordKept remembers a kept demo (called under the run lock).
+func recordKept(r Result) {
+	list := loadKept()
+	k := KeptDemo{File: r.Demo.File, Path: r.Path, Level: r.Level, Flags: r.Flags, Server: r.Demo.Server,
+		Mode: r.Demo.Mode, Map: r.Demo.Map, SizeMB: r.Demo.SizeMB, At: time.Now()}
+	list = slices.DeleteFunc(list, func(o KeptDemo) bool { return strings.EqualFold(o.Path, k.Path) })
+	list = append(list, k)
+	if len(list) > 2000 {
+		list = list[len(list)-2000:]
+	}
+	b, _ := json.Marshal(list)
+	tmp := keptPath() + ".tmp"
+	if os.WriteFile(tmp, b, 0644) == nil {
+		_ = os.Rename(tmp, keptPath())
+	}
+}
+
+func loadKept() []KeptDemo {
+	var list []KeptDemo
+	if b, err := os.ReadFile(keptPath()); err == nil {
+		_ = json.Unmarshal(b, &list)
+	}
+	return list
+}
+
+// Kept lists the demos the archive kept that are still on disk, newest first.
+func Kept() []KeptDemo {
+	var out []KeptDemo
+	for _, k := range loadKept() {
+		if _, err := os.Stat(k.Path); err == nil {
+			out = append(out, k)
+		}
+	}
+	slices.Reverse(out)
+	return out
 }

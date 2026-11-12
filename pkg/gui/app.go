@@ -515,6 +515,26 @@ func LaunchApp(initialDemoPath string) error {
 
 	// Automatic archive (archive.go)
 	_ = w.Bind("getArchiveStatus", func() archiveStatus { return archStatus() })
+	// listArchived: demos the archive kept, with their history entry when there is one
+	_ = w.Bind("listArchived", func() []map[string]any {
+		inHistory := map[string]bool{}
+		for _, e := range history.List() {
+			inHistory[e.ID] = true
+		}
+		var out []map[string]any
+		for _, k := range archive.Kept() {
+			id, _ := history.ID(k.Path)
+			if !inHistory[id] {
+				id = ""
+			}
+			out = append(out, map[string]any{"demo": k, "historyId": id})
+		}
+		return out
+	})
+	_ = w.Bind("openDemoPath", func(path string) error {
+		go a.processQueue([]string{path}, false)
+		return nil
+	})
 	_ = w.Bind("runArchiveNow", func() error {
 		select {
 		case archWakeup <- struct{}{}:

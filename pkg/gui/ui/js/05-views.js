@@ -5,13 +5,12 @@ function setProgress(pct, label) {
 }
 
 // Only one main view is visible at a time
-const VIEWS = { drop: 'dropzone', loading: 'loadingState', batch: 'batchView', audit: 'auditContent', overview: 'overviewView', player: 'playerView' };
+const VIEWS = { drop: 'dropzone', loading: 'loadingState', batch: 'batchView', audit: 'auditContent', overview: 'overviewView', player: 'playerView', home: 'homeView', archive: 'archiveView', settings: 'settingsView' };
 function showView(name) {
     Object.keys(VIEWS).forEach(k => {
         document.getElementById(VIEWS[k]).style.display = k === name ? 'flex' : 'none';
     });
-    const demoButtons = name === 'audit' ? 'inline-flex' : 'none';
-    ['btnReanalyze', 'btnPNG', 'btnSummary'].forEach(id => document.getElementById(id).style.display = demoButtons);
+    setChrome(VIEW_SECTION[name], name); // rail, left list and top bar (20-sections.js)
     if (name !== 'audit') document.getElementById('demoMeta').innerHTML = '';
     document.getElementById('main').scrollTop = 0;
 }
