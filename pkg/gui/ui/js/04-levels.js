@@ -49,7 +49,7 @@ function refreshConfirmed(then) {
 
 // Re-render whatever is on screen after a confirmation changes
 function rerenderAll() {
-    if (currentReport) { renderPlayers(); renderDetections(); renderSummary(); }
+    if (currentReport) { renderPlayers(); renderSummary(); }
     renderPlayerList();
     if (document.getElementById('playerView').style.display === 'flex' && activePlayer) openPlayerPage(activePlayer);
 }

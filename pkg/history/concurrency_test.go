@@ -36,6 +36,7 @@ func fakeReport(i int) *core.DemoReport {
 func TestConcurrentSaveAndRead(t *testing.T) {
 	dir := t.TempDir()
 	const n = 16
+	before, ovBefore := len(List()), GetOverview()
 	var wg sync.WaitGroup
 	for i := range n {
 		path := filepath.Join(dir, fmt.Sprintf("demo%d.dem", i))
@@ -58,10 +59,10 @@ func TestConcurrentSaveAndRead(t *testing.T) {
 	}
 	wg.Wait()
 
-	if got := len(List()); got != n {
-		t.Fatalf("history has %d entries, want %d", got, n)
+	if got := len(List()); got != before+n {
+		t.Fatalf("history has %d entries, want %d", got, before+n)
 	}
-	if ov := GetOverview(); ov.Players != n*10 || ov.CheatPlayers != n {
-		t.Fatalf("overview players=%d cheat=%d, want %d and %d", ov.Players, ov.CheatPlayers, n*10, n)
+	if ov := GetOverview(); ov.Players != ovBefore.Players+n*10 || ov.CheatPlayers != ovBefore.CheatPlayers+n {
+		t.Fatalf("overview players=%d cheat=%d, want %d and %d", ov.Players, ov.CheatPlayers, ovBefore.Players+n*10, ovBefore.CheatPlayers+n)
 	}
 }

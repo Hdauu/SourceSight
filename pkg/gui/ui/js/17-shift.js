@@ -21,6 +21,7 @@ function showMoreShift() {
 // Opens the log filtered to one player and scrolls to it (from the player detail).
 function showShiftOf(steamId) {
     closePlayer();
+    setReportTab('shift');
     shiftPlayer = String(steamId);
     shiftShown = 25;
     renderShift();

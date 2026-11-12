@@ -8,7 +8,7 @@ function openPlayer(p) {
     const hasSteam = !!p.steamId && p.steamId !== "0";
     const sid = String(p.steamId);
 
-    document.getElementById('pmName').innerText = p.name;
+    document.getElementById('pmName').innerHTML = playerLabel(p.name);
     document.getElementById('pmSub').innerText = hasSteam ? 'SteamID64 ' + sid : 'Sin SteamID (bot o demo sin datos)';
 
     let actions = '';
@@ -109,11 +109,9 @@ function openPlayer(p) {
     if (document.getElementById('roundChart')) drawRoundChart(document.getElementById('roundChart'), incs);
     const fig = document.getElementById('pmFigure');
     if (fig) {
-        renderBodyPanel(fig, { mine: p.hits, mineLabel: 'En esta demo', mode: 'mine' });
-        // The general average arrives later; the figure gains the other two modes then
-        if (window.getOverview) window.getOverview().then(ov => {
-            if (ov && ov.averages && ov.averages.hits) renderBodyPanel(fig, { avg: ov.averages.hits });
-        });
+        // Compared with the rest of this match: same map, same opponents, without the player
+        const rest = mergeHits(currentReport.players.filter(x => x !== p).map(x => x.hits));
+        renderBodyPanel(fig, { mine: p.hits, mineLabel: 'En esta demo', avg: rest, avgLabel: 'Resto de la partida', mode: 'mine' });
     }
     if (hasSteam && window.getPlayerDetail) {
         window.getPlayerDetail(sid).then(d => renderProfile(d));

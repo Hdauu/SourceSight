@@ -80,3 +80,18 @@ function accuracyOf(h) {
     if (sg) { hits -= hitsOf(sg.zones); shots -= sg.shots || 0; }
     return shots > 0 ? Math.round(1000 * hits / shots) / 10 : null;
 }
+
+// Some players use names made of invisible characters (zero-width spaces, Unicode
+// tags) so they don't show up in lists. Those show as "(nombre invisible)".
+const INVISIBLE_CHARS = (() => {
+    // Built from code points so the source has no invisible characters itself
+    const cp = n => String.fromCharCode(n);
+    const singles = [0xAD, 0x34F, 0x115F, 0x1160, 0x17B4, 0x17B5, 0x180E, 0x3164, 0xFEFF, 0xFFA0];
+    const ranges = [[0x200B, 0x200F], [0x2028, 0x202F], [0x205F, 0x206F]];
+    const cls = '\\s' + singles.map(cp).join('') + ranges.map(r => cp(r[0]) + '-' + cp(r[1])).join('');
+    // Unicode tag characters (U+E0000 to U+E007F) come as a surrogate pair
+    return new RegExp('[' + cls + ']|' + cp(0xDB40) + '[' + cp(0xDC00) + '-' + cp(0xDC7F) + ']', 'g');
+})();
+function playerLabel(name) {
+    return String(name || '').replace(INVISIBLE_CHARS, '') ? esc(name) : '<span class="muted">(nombre invisible)</span>';
+}

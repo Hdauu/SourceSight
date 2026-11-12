@@ -103,7 +103,6 @@ function loadDemoReport(report, meta) {
     renderSummary();
 
     renderPlayers();
-    renderDetections();
     renderTimeline();
     renderAdmin();
     renderChat();
@@ -111,6 +110,7 @@ function loadDemoReport(report, meta) {
     shiftShown = 25;
     renderShift();
     renderMapCard();
+    updateTabCounts();
     renderHistory();
     document.getElementById('main').scrollTop = 0;
 }

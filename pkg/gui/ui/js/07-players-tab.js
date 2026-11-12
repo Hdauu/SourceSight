@@ -114,7 +114,8 @@ function openPlayerPage(steamId) {
             showView('player');
             return;
         }
-        const a = d.averages || {}, g = (d.global && d.global.averages) || {};
+        // Compared with every other player of the history, without this one (d.others)
+        const a = d.averages || {}, g = d.others || (d.global && d.global.averages) || {};
         const flagKeys = Object.keys(d.flagCounts || {});
         el.innerHTML =
             '<div class="page-head"><div style="min-width:0;"><div class="page-title">' + esc(d.name) + '</div>' +
@@ -136,8 +137,8 @@ function openPlayerPage(steamId) {
                 '<div class="sum-cell"><div class="sum-label">Kills cegado / humo</div><div class="sum-value">' + d.totals.blind + ' / ' + d.totals.smoke + '</div><div class="sum-sub">macro: ' + d.totals.macro + '</div></div>' +
             '</div>' +
             notesBlock(d.notes, 'Para mirar en sus demos') +
-            '<section class="panel"><div class="panel-head"><div class="panel-title">Promedio del jugador vs. todos</div><span class="muted">En rojo, lo que está muy por encima del promedio general</span></div>' +
-            '<div class="table-wrap"><table class="compare"><thead><tr><th></th><th class="r">Este jugador</th><th class="r">Promedio general</th></tr></thead><tbody>' +
+            '<section class="panel"><div class="panel-head"><div class="panel-title">Este jugador vs. el resto</div><span class="muted">El resto: todos los demás jugadores del historial. En rojo, lo que está muy por encima</span></div>' +
+            '<div class="table-wrap"><table class="compare"><thead><tr><th></th><th class="r">Este jugador</th><th class="r">El resto</th></tr></thead><tbody>' +
                 compareRow('Perfs de bhop', a.perfRatio, g.perfRatio, '%', true, true) +
                 compareRow('Reacción (triggerbot)', a.reactionMs, g.reactionMs, ' ms', false) +
                 compareRow('Prefire: daño apenas aparece el rival', a.prefirePct, g.prefirePct, '%', true, true) +
@@ -165,7 +166,7 @@ function openPlayerPage(steamId) {
                 '</tr>'
             ).join('') +
             '</tbody></table></div></section>';
-        renderBodyPanel(document.getElementById('ppFigure'), { mine: a.hits, mineLabel: 'Este jugador', avg: g.hits, mode: 'compare' });
+        renderBodyPanel(document.getElementById('ppFigure'), { mine: a.hits, mineLabel: 'Este jugador', avg: g.hits, avgLabel: 'Resto de los jugadores', mode: 'compare' });
         showView('player');
     });
 }

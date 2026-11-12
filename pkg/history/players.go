@@ -80,8 +80,11 @@ type PlayerDetail struct {
 		Smoke     int `json:"smoke"`
 		Incidents int `json:"incidents"`
 	} `json:"totals"`
-	Averages    Averages     `json:"averages"`
-	Global      Overview     `json:"global"`
+	Averages Averages `json:"averages"`
+	Global   Overview `json:"global"`
+	// Others averages every other player-demo of the history, without this player, so
+	// the comparison isn't pulled toward them (Global includes them).
+	Others      Averages     `json:"others"`
 	Notes       []string     `json:"notes,omitempty"` // informative, see core/notes.go
 	Appearances []Appearance `json:"appearances"`
 }
@@ -292,10 +295,12 @@ func GetPlayer(steamID string) *PlayerDetail {
 	d := &PlayerDetail{SteamID: steamID, FlagCounts: map[string]int{}}
 	var acc accum
 	var mine, others core.NoteCounts
+	var othersAcc accum
 	for _, e := range all() {
 		for _, s := range e.Summaries {
 			if s.SteamID != steamID {
 				others.Add(s.noteCounts())
+				othersAcc.add(s)
 				continue
 			}
 			mine.Add(s.noteCounts())
@@ -351,6 +356,7 @@ func GetPlayer(steamID string) *PlayerDetail {
 	d.Averages = acc.averages()
 	d.Notes = core.Notes(mine, others, "el resto de los jugadores del historial")
 	d.Global = GetOverview()
+	d.Others = othersAcc.averages()
 	return d
 }
 

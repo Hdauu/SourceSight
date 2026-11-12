@@ -28,6 +28,7 @@ The app itself is in Spanish; this document describes it in English.
 - [Install](#install)
 - [Quick start](#quick-start)
 - [How a demo is analyzed](#how-a-demo-is-analyzed)
+- [A demo report](#a-demo-report)
 - [Levels](#levels)
 - [Detections](#detections)
   - [Autobunny](#autobunny) · [Triggerbot](#triggerbot) · [Aimlock and spinbot](#aimlock-and-spinbot) · [Silent aim](#silent-aim) · [Wallhack](#wallhack) · [Prefire](#prefire) · [Macro](#macro) · [Blind kills](#blind-kills) · [Kills through smoke](#kills-through-smoke) · [AFK](#afk) · [Team flashes](#team-flashes)
@@ -85,6 +86,18 @@ A 35-minute demo at 128 tick (about 270,000 ticks) takes 4 to 8 seconds.
 - At the end there is a summary ("2 con cheat · 1 sospechosa · 5 limpias…").
 
 Measured with 12 real demos on a 12-thread CPU: 62 s one by one, 11 s in parallel. Reports come out identical either way, and a test checks it.
+
+## A demo report
+
+On top, a summary (players, cheats, length, reoffenders). Below, tabs:
+
+- **Jugadores** (players): one row per player with their result, perfs, reaction, prefire, head %, snaps, SHIFT cases and ping. Sortable by any column (worst result first by default) and filterable by level or name. Click a player for their detail. Names made of invisible characters show as "(nombre invisible)".
+- **Incidentes** (incidents): each incident with its round, type, player, command and **Ver** button.
+- **Mapa** (map): see [Minimap](#minimap).
+- **SHIFT:** see [SHIFT log](#shift-log).
+- **Chat y admins:** admin commands and chat.
+
+The app remembers the last tab you used.
 
 ## Levels
 
@@ -335,7 +348,7 @@ Only bullets to enemies count: knife, grenades, fire and zeus don't.
 
 **Modes.**
 - **Player:** their hits in that demo (player detail) or across all their demos (player page).
-- **General average:** how all the players in your history hit on average.
+- **What they are compared with, never counting the player:** in a demo's player detail, **the rest of that match** (same map, same opponents); on the player page, **the rest of the players** in the history; in "Todas las demos", everyone's average.
 - **Comparison:** both figures side by side.
 
 It can be filtered by weapon type. Below there's a table with hits, damage, % and the difference from the average in points. A head difference of 10 points or more is shown in yellow, purely as information. With fewer than 10 hits it warns that the percentages don't mean much yet.
@@ -479,7 +492,7 @@ The **Jugadores** tab adds each player (by SteamID) up across all your demos:
 - how many demos they appear in, how many they were flagged in and why;
 - every name they used;
 - totals of incidents, blind, smoke and macro kills;
-- **their average against the general average**: bhop perfs, reaction, prefire, head hits, ping, snaps, silent aim and wallhack per demo. Values well above are shown in red;
+- **their average against the rest of the players** (everyone else, without them, so the comparison isn't pulled toward their own numbers): bhop perfs, reaction, prefire, head hits, ping, snaps, silent aim and wallhack per demo. Values well above are shown in red;
 - the where-they-hit figure, compared with the average;
 - the observations of their demos added up;
 - the list of their demos, click to open each.

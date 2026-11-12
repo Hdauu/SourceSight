@@ -132,7 +132,7 @@ function bodyTable(mine, avg, mode, st) {
         (showMine && (mine.zones.other || {}).hits) || (showAvg && (avg.zones.other || {}).hits));
     let head = '<th>Zona</th>';
     if (showMine) head += '<th class="r">Impactos</th><th class="r">Daño</th><th class="r">%</th>';
-    if (showAvg) head += '<th class="r">' + (showMine ? '% promedio' : '%') + '</th>';
+    if (showAvg) head += '<th class="r">' + (showMine ? '% ' + esc(avgName(st).toLowerCase()) : '%') + '</th>';
     if (showMine && showAvg) head += '<th class="r">Diferencia</th>';
     const rows = zones.map(z => {
         let r = '<td>' + z.label + '</td>';
@@ -166,7 +166,7 @@ function renderBodyPanel(host, opts) {
     const st = host._body = Object.assign(host._body || { weapon: 'all' }, opts);
     const modes = [];
     if (st.mine) modes.push(['mine', st.mineLabel || 'Jugador']);
-    if (st.avg) modes.push(['avg', 'Promedio general']);
+    if (st.avg) modes.push(['avg', avgName(st)]);
     if (st.mine && st.avg) modes.push(['compare', 'Comparación']);
     if (!modes.length) {
         host.innerHTML = '<div class="muted">Todavía no hay impactos registrados. Las demos analizadas con una versión anterior no los tienen: re-analizalas desde el historial.</div>';
@@ -185,7 +185,7 @@ function renderBodyPanel(host, opts) {
 
     let figs = '';
     if (st.mode !== 'avg') figs += bodySvg(mine, st.mineLabel || 'Jugador');
-    if (st.mode !== 'mine') figs += bodySvg(avg, 'Promedio general');
+    if (st.mode !== 'mine') figs += bodySvg(avg, avgName(st));
 
     host.innerHTML =
         '<div class="body-controls">' +
@@ -205,4 +205,32 @@ function renderBodyPanel(host, opts) {
         if (el.tagName === 'SELECT') el.onchange = () => apply(el.value);
         else el.onclick = () => apply(el.dataset.v);
     });
+}
+
+// What the player is compared with ("Resto de la partida", "Resto de los jugadores"…).
+function avgName(st) { return (st && st.avgLabel) || 'Promedio general'; }
+
+// Sum of several hit profiles (the rest of a match), in the same shape as Go's.
+function mergeHits(list) {
+    const out = { shots: 0, kills: 0, headshotKills: 0, zones: {}, byClass: {} };
+    const addZones = (dst, src) => Object.keys(src || {}).forEach(k => {
+        const z = dst[k] || (dst[k] = { hits: 0, damage: 0 });
+        z.hits += src[k].hits || 0;
+        z.damage += src[k].damage || 0;
+    });
+    let any = false;
+    list.forEach(h => {
+        if (!h) return;
+        any = true;
+        out.shots += h.shots || 0;
+        out.kills += h.kills || 0;
+        out.headshotKills += h.headshotKills || 0;
+        addZones(out.zones, h.zones);
+        Object.keys(h.byClass || {}).forEach(c => {
+            const w = out.byClass[c] || (out.byClass[c] = { shots: 0, zones: {} });
+            w.shots += h.byClass[c].shots || 0;
+            addZones(w.zones, h.byClass[c].zones);
+        });
+    });
+    return any ? out : null;
 }

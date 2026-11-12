@@ -26,6 +26,7 @@ Funciona en Windows, todo en tu PC. No se sube nada a ningún lado.
 - [Instalar](#instalar)
 - [Uso rápido](#uso-rápido)
 - [Cómo se analiza una demo](#cómo-se-analiza-una-demo)
+- [El reporte de una demo](#el-reporte-de-una-demo)
 - [Niveles](#niveles)
 - [Detecciones](#detecciones)
   - [Autobunny](#autobunny) · [Triggerbot](#triggerbot) · [Aimlock y spinbot](#aimlock-y-spinbot) · [Silent aim](#silent-aim) · [Wallhack](#wallhack) · [Prefire](#prefire) · [Macro](#macro) · [Kills cegado](#kills-cegado) · [Kills a través del humo](#kills-a-través-del-humo) · [AFK](#afk) · [Teamflash](#teamflash)
@@ -83,6 +84,18 @@ Una demo de 35 minutos a 128 tick (unos 270.000 ticks) tarda entre 4 y 8 segundo
 - Al terminar queda un resumen ("2 con cheat · 1 sospechosa · 5 limpias…").
 
 Medido con 12 demos reales en un procesador de 12 hilos: 62 s una por una, 11 s en paralelo. Los reportes salen idénticos de las dos formas, y hay un test que lo comprueba.
+
+## El reporte de una demo
+
+Arriba, un resumen (jugadores, cheats, duración, reincidentes). Abajo, pestañas:
+
+- **Jugadores:** una fila por jugador con su resultado, perfs, reacción, prefire, % a la cabeza, snaps, casos de SHIFT y ping. Se ordena por cualquier columna (por defecto, del peor resultado al mejor) y se filtra por nivel o por nombre. Click en un jugador para ver su detalle. Los nombres hechos de caracteres invisibles se muestran como "(nombre invisible)".
+- **Incidentes:** cada incidente con su ronda, tipo, jugador, comando y botón **Ver**.
+- **Mapa:** ver [Mapa](#mapa).
+- **SHIFT:** ver [Registro de SHIFT](#registro-de-shift).
+- **Chat y admins:** los comandos de admins y el chat.
+
+La app recuerda la última pestaña que usaste.
 
 ## Niveles
 
@@ -333,7 +346,7 @@ Solo cuentan las balas a enemigos: cuchillo, granadas, fuego y zeus no cuentan.
 
 **Modos.**
 - **Jugador:** sus impactos en esa demo (detalle del jugador) o en todas sus demos (ficha del jugador).
-- **Promedio general:** cómo pegan en promedio todos los jugadores de tu historial.
+- **Contra qué se compara, nunca contándolo a él:** en el detalle de una demo, **el resto de esa partida** (mismo mapa, mismos rivales); en la ficha del jugador, **el resto de los jugadores** del historial; en "Todas las demos", el promedio de todos.
 - **Comparación:** las dos figuras lado a lado.
 
 Se puede filtrar por tipo de arma. Debajo hay una tabla con impactos, daño, % y la diferencia contra el promedio en puntos. Una diferencia en la cabeza de 10 puntos o más sale en amarillo, solo como dato. Con menos de 10 impactos avisa que los porcentajes todavía no dicen mucho.
@@ -476,7 +489,7 @@ La pestaña **Jugadores** suma a cada jugador (por SteamID) en todas tus demos:
 - en cuántas demos aparece, en cuántas quedó marcado y por qué;
 - todos los nombres que usó;
 - totales de incidentes, kills cegado, por humo y macro;
-- **su promedio contra el promedio general**: perfs de bhop, reacción, prefire, impactos a la cabeza, ping, snaps, silent aim y wallhack por demo. En rojo, lo que está muy por encima;
+- **su promedio contra el resto de los jugadores** (todos los demás, sin contarlo a él, para que la comparación no se corra hacia sus propios números): perfs de bhop, reacción, prefire, impactos a la cabeza, ping, snaps, silent aim y wallhack por demo. En rojo, lo que está muy por encima;
 - la figura de dónde pega, comparada con el promedio;
 - las observaciones de sus demos sumadas;
 - la lista de sus demos, con click para abrir cada una.

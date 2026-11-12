@@ -169,7 +169,15 @@
                         </div>
                     </div>
 
-                    <section class="panel" id="playersCard">
+                    <div class="tabs" id="reportTabs" role="tablist">
+                        <button class="on" data-tab="players" onclick="setReportTab('players')">Jugadores <span class="count" id="tabCountPlayers"></span></button>
+                        <button data-tab="incidents" onclick="setReportTab('incidents')">Incidentes <span class="count" id="tabCountIncidents"></span></button>
+                        <button data-tab="map" onclick="setReportTab('map')">Mapa</button>
+                        <button data-tab="shift" onclick="setReportTab('shift')">SHIFT <span class="count" id="tabCountShift"></span></button>
+                        <button data-tab="chat" onclick="setReportTab('chat')">Chat y admins <span class="count" id="tabCountChat"></span></button>
+                    </div>
+
+                    <section class="panel" id="playersCard" data-tab="players">
                         <div class="panel-head">
                             <div class="panel-title">Jugadores <span class="count" id="playersCount"></span></div>
                             <div class="panel-tools">
@@ -187,13 +195,14 @@
                                 <thead>
                                     <tr>
                                         <th class="sortable" data-key="name" onclick="sortPlayers('name')">Jugador</th>
-                                        <th class="sortable r" data-key="totalJumps" onclick="sortPlayers('totalJumps')">Saltos</th>
-                                        <th class="sortable r" data-key="perfRatio" onclick="sortPlayers('perfRatio')">Perfs</th>
-                                        <th class="sortable r" data-key="oneTickRatio" onclick="sortPlayers('oneTickRatio')">1 tick</th>
-                                        <th class="sortable r" data-key="maxStreak" onclick="sortPlayers('maxStreak')">Racha</th>
-                                        <th class="sortable r" data-key="snapCount" onclick="sortPlayers('snapCount')">Snaps</th>
-                                        <th class="sortable r" data-key="maxSpeed" onclick="sortPlayers('maxSpeed')">Vel. máx</th>
-                                        <th class="r">Resultado</th>
+                                        <th class="sortable" data-key="level" onclick="sortPlayers('level')">Resultado</th>
+                                        <th class="sortable r" data-key="perfRatio" onclick="sortPlayers('perfRatio')" title="Saltos perfectos del bunny hop">Perfs</th>
+                                        <th class="sortable r" data-key="reaction" onclick="sortPlayers('reaction')" title="Tiempo entre tener al rival en la mira y disparar">Reacción</th>
+                                        <th class="sortable r" data-key="prefire" onclick="sortPlayers('prefire')" title="Daño a menos de 100 ms de que aparece el rival">Prefire</th>
+                                        <th class="sortable r" data-key="head" onclick="sortPlayers('head')" title="Parte de los impactos que fue a la cabeza">Cabeza</th>
+                                        <th class="sortable r" data-key="snapCount" onclick="sortPlayers('snapCount')" title="Giros de más de 45° en un tick">Snaps</th>
+                                        <th class="sortable r" data-key="shiftCases" onclick="sortPlayers('shiftCases')" title="Veces que caminó con shift cerca de un enemigo sin verlo">SHIFT</th>
+                                        <th class="sortable r" data-key="ping" onclick="sortPlayers('ping')">Ping</th>
                                     </tr>
                                 </thead>
                                 <tbody id="playersBody"></tbody>
@@ -201,31 +210,7 @@
                         </div>
                     </section>
 
-                    <section class="panel" id="detectCard">
-                        <div class="panel-head">
-                            <div class="panel-title">Detecciones</div>
-                            <span class="muted">Triggerbot, aim, prefire, macro, flash y humo, wallhack</span>
-                        </div>
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Jugador</th>
-                                        <th class="r">Reacción</th>
-                                        <th class="r">Snaps / silent</th>
-                                        <th class="r">Macro</th>
-                                        <th class="r">Cegado / humo</th>
-                                        <th class="r">Wallhack</th>
-                                        <th class="r" title="Peleas donde hizo daño a menos de 100 ms de que el rival quedara a la vista">Prefire</th>
-                                        <th class="r">Resultado</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="detectBody"></tbody>
-                            </table>
-                        </div>
-                    </section>
-
-                    <section class="panel" id="timelineCard">
+                    <section class="panel" id="timelineCard" data-tab="incidents">
                         <div class="panel-head">
                             <div class="panel-title">Incidentes <span class="count" id="timelineCount"></span></div>
                             <span class="muted">El comando ya incluye unos segundos antes de la jugada</span>
@@ -251,7 +236,7 @@
                     </section>
 
                     <!-- Minimap on the game's own radar (js/18-map.js) -->
-                    <section class="panel" id="mapCard">
+                    <section class="panel" id="mapCard" data-tab="map">
                         <div class="panel-head">
                             <div class="panel-title">Mapa</div>
                             <div class="map-filters">
@@ -273,7 +258,7 @@
                         </div>
                     </section>
 
-                    <section class="panel" id="adminCard">
+                    <section class="panel" id="adminCard" data-tab="chat">
                         <div class="panel-head">
                             <div class="panel-title">Comandos de admins <span class="count" id="adminCount"></span></div>
                         </div>
@@ -295,7 +280,7 @@
                     </section>
 
                     <!-- Walking near unseen enemies (js/17-shift.js) -->
-                    <section class="panel" id="shiftCard">
+                    <section class="panel" id="shiftCard" data-tab="shift">
                         <div class="panel-head">
                             <div class="panel-title">Registro de SHIFT <span class="count" id="shiftCount"></span></div>
                             <select class="input" id="shiftPlayer" onchange="setShiftPlayer(this.value)" aria-label="Jugador" style="width:auto;"></select>
@@ -323,7 +308,7 @@
                         </div>
                     </section>
 
-                    <section class="panel" id="chatCard">
+                    <section class="panel" id="chatCard" data-tab="chat">
                         <div class="panel-head">
                             <div class="panel-title">Chat <span class="count" id="chatCount"></span></div>
                             <div class="seg" id="chatFilter">

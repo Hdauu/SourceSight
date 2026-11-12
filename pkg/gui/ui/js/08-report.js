@@ -5,14 +5,31 @@ function setPlayerFilter(f, el) {
     renderPlayers();
 }
 
+// Sort value of each column. Missing values (no reaction measured, too few hits…)
+// always go last, whatever the direction.
+const LEVEL_RANK = { confirmado: 5, cheat: 4, sospechoso: 3, conducta: 2, limpio: 1 };
+const PLAYER_SORT = {
+    name: p => p.name.toLowerCase(),
+    level: p => (confirmationOf(p) ? LEVEL_RANK.confirmado : LEVEL_RANK[levelOf(p)] || 0) * 1000 + (p.flags || []).length,
+    perfRatio: p => p.totalJumps >= 5 ? p.perfRatio : null,
+    reaction: p => p.triggerAvgMs === null || p.triggerAvgMs === undefined ? null : p.triggerAvgMs,
+    prefire: p => p.peekEngagements ? p.prefireRatio : null,
+    head: p => { const t = hitTotals(p.hits); return t ? t.headPct : null; },
+    snapCount: p => p.snapCount,
+    shiftCases: p => p.shiftCases || 0,
+    ping: p => p.pingAvg || null
+};
+
 function sortPlayers(key) {
     if (sortKey === key) sortAsc = !sortAsc;
-    else { sortKey = key; sortAsc = key === 'name'; }
+    // Names and reaction times read best ascending (fastest first); the rest descending
+    else { sortKey = key; sortAsc = key === 'name' || key === 'reaction'; }
     renderPlayers();
 }
 
 function renderPlayers() {
     if (!currentReport) return;
+    if (!PLAYER_SORT[sortKey]) sortKey = 'level';
     document.querySelectorAll('#playersCard th.sortable').forEach(th => {
         const on = th.getAttribute('data-key') === sortKey;
         th.classList.toggle('sorted', on);
@@ -26,70 +43,54 @@ function renderPlayers() {
     if (playerFilter === 'suspect') players = players.filter(p => !confirmationOf(p) && levelOf(p) === 'sospechoso');
     if (playerFilter === 'clean') players = players.filter(p => !flagged(p));
 
+    const get = PLAYER_SORT[sortKey];
     players.sort((a, b) => {
-        const va = a[sortKey], vb = b[sortKey];
-        if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-        return sortAsc ? va - vb : vb - va;
+        const va = get(a), vb = get(b);
+        if (va === null && vb === null) return a.name.localeCompare(b.name);
+        if (va === null) return 1;
+        if (vb === null) return -1;
+        const c = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+        return (sortAsc ? c : -c) || a.name.localeCompare(b.name);
     });
 
     document.getElementById('playersCount').innerText = players.length;
     const body = document.getElementById('playersBody');
     if (players.length === 0) {
-        body.innerHTML = emptyRow(8, 'Ningún jugador coincide.');
+        body.innerHTML = emptyRow(9, 'Ningún jugador coincide.');
         return;
     }
+    const dash = '<span class="muted">–</span>';
     body.innerHTML = '';
     players.forEach(p => {
         const tr = document.createElement('tr');
         tr.className = 'click' + rowMark(p);
         tr.onclick = () => openPlayer(p);
+        const flags = p.flags || [];
+        const hasTrig = p.triggerAvgMs !== null && p.triggerAvgMs !== undefined;
+        const t = hitTotals(p.hits);
         const perfCls = p.perfRatio >= 75 ? 't-red' : (p.perfRatio >= 55 ? 't-yellow' : '');
         tr.innerHTML =
-            '<td class="player">' + esc(p.name) + '</td>' +
-            '<td class="r">' + p.totalJumps + '</td>' +
-            '<td class="r ' + perfCls + '">' + p.perfRatio.toFixed(1) + '% <span class="muted">' + p.perfectHops + '</span></td>' +
-            '<td class="r">' + p.oneTickRatio.toFixed(1) + '%</td>' +
-            '<td class="r ' + (p.maxStreak >= 5 ? 't-red' : '') + '">' + p.maxStreak + '</td>' +
-            '<td class="r ' + (p.flags && p.flags.includes('AIMLOCK') ? 't-red' : '') + '">' + p.snapCount + '</td>' +
-            '<td class="r">' + p.maxSpeed + ' <span class="muted">u/s</span></td>' +
-            '<td class="r">' + resultCell(p) + '</td>';
-        body.appendChild(tr);
-    });
-}
-
-function renderDetections() {
-    // Everyone worth a look except bhop-only cases, which the players table already shows
-    const rows = currentReport.players.filter(p => flagged(p) &&
-        (confirmationOf(p) || p.flags.some(f => f !== 'AUTOBUNNY' && f !== 'SOSPECHOSO-BHOP')));
-    const body = document.getElementById('detectBody');
-    if (rows.length === 0) {
-        body.innerHTML = emptyRow(8, 'Nadie superó los umbrales de triggerbot, aimlock, silent aim, macro, wallhack, prefire, kills cegado ni humo.');
-        return;
-    }
-    body.innerHTML = '';
-    rows.forEach(p => {
-        const tr = document.createElement('tr');
-        tr.className = 'click' + rowMark(p);
-        tr.onclick = () => openPlayer(p);
-        const hasTrig = p.triggerAvgMs !== null && p.triggerAvgMs !== undefined;
-        tr.innerHTML =
-            '<td class="player">' + esc(p.name) + '</td>' +
-            '<td class="r ' + (hasTrig && p.triggerAvgMs < 80 ? 't-red' : '') + '">' + (hasTrig ? p.triggerAvgMs + ' ms <span class="muted">±' + (p.triggerSigma || 0).toFixed(0) + '</span>' : '<span class="muted">–</span>') + '</td>' +
-            '<td class="r">' + p.snapCount + ' / ' + p.silentCount + '</td>' +
-            '<td class="r">' + (p.macroHits || '<span class="muted">–</span>') + '</td>' +
-            '<td class="r">' + p.flashKills + ' / ' + p.smokeKills + '</td>' +
-            '<td class="r">' + (p.wallTrackCount || '<span class="muted">–</span>') + '</td>' +
-            '<td class="r' + ((p.flags || []).includes('PREFIRE') ? ' t-red' : '') + '">' + (p.peekEngagements ? p.prefireRatio + '%' : '<span class="muted">–</span>') + '</td>' +
-            '<td class="r">' + resultCell(p) + '</td>';
+            '<td class="player">' + playerLabel(p.name) + '</td>' +
+            '<td>' + resultCell(p) + '</td>' +
+            '<td class="r ' + (p.totalJumps >= 5 ? perfCls : '') + '">' + (p.totalJumps >= 5 ? p.perfRatio.toFixed(1) + '% <span class="muted">de ' + p.totalJumps + '</span>' : dash) + '</td>' +
+            '<td class="r ' + (hasTrig && p.triggerAvgMs < 80 ? 't-red' : '') + '">' + (hasTrig ? p.triggerAvgMs + ' ms' : dash) + '</td>' +
+            '<td class="r' + (flags.includes('PREFIRE') ? ' t-red' : '') + '">' + (p.peekEngagements ? p.prefireRatio + '%' : dash) + '</td>' +
+            '<td class="r">' + (t && t.headPct !== null ? t.headPct + '%' : dash) + '</td>' +
+            '<td class="r ' + (flags.includes('AIMLOCK') ? 't-red' : flags.includes('SOSPECHOSO-AIM') ? 't-yellow' : '') + '">' + (p.snapCount || dash) + '</td>' +
+            '<td class="r">' + (p.shiftCases || dash) + '</td>' +
+            '<td class="r muted">' + (p.pingAvg ? p.pingAvg + ' ms' : '–') + '</td>';
         body.appendChild(tr);
     });
 }
 
 function renderTimeline() {
     const all = currentReport.timeline || [];
-    const card = document.getElementById('timelineCard');
-    card.style.display = all.length ? 'block' : 'none';
-    if (!all.length) return;
+    if (!all.length) {
+        document.getElementById('timelineCount').innerText = '';
+        document.getElementById('timelineBody').innerHTML = emptyRow(7, 'Ningún jugador superó un umbral de detección en esta demo.');
+        document.getElementById('timelineMore').style.display = 'none';
+        return;
+    }
 
     const shown = Math.min(timelineShown, all.length);
     document.getElementById('timelineCount').innerText = all.length;

@@ -325,6 +325,7 @@ document.addEventListener('click', e => {
 // Opens the minimap filtered to one player, with their path (from the player detail).
 function showOnMap(steamId) {
     closePlayer();
+    setReportTab('map');
     mapState.player = String(steamId);
     mapState.round = '';
     mapState.layers.paths = true;
