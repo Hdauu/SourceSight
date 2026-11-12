@@ -25,7 +25,7 @@ const BODY_ZONE_LABEL = Object.fromEntries(BODY_ZONES.map(z => [z.key, z.label])
 
 const BODY_WEAPONS = [
     ['all', 'Todas las armas'], ['rifle', 'Rifles'], ['sniper', 'Snipers'],
-    ['pistol', 'Pistolas'], ['smg', 'SMG'], ['heavy', 'Escopetas y pesadas']
+    ['pistol', 'Pistolas'], ['smg', 'SMG'], ['shotgun', 'Escopetas'], ['heavy', 'Ametralladoras']
 ];
 
 // Shapes, drawn around x = 180 in a 360 × 430 box. Right-side limbs (viewer's left)
@@ -126,7 +126,7 @@ function bodySvg(c, team, title) {
     '</figure>';
 }
 
-function bodyTable(mine, avg, mode) {
+function bodyTable(mine, avg, mode, st) {
     const showMine = mode !== 'avg' && mine, showAvg = mode !== 'mine' && avg;
     const zones = BODY_ZONES.filter(z => z.key !== 'other' ||
         (showMine && (mine.zones.other || {}).hits) || (showAvg && (avg.zones.other || {}).hits));
@@ -151,8 +151,11 @@ function bodyTable(mine, avg, mode) {
     }).join('');
     let foot = '';
     if (showMine) {
-        const acc = mine.shots ? fmtPct(100 * mine.total / mine.shots) : '–';
-        foot = '<div class="muted body-foot">' + mine.total + ' impactos de ' + mine.shots + ' tiros (precisión ' + acc + ').' +
+        // Shotgun pellets count one hit each: accuracy means nothing for them
+        const acc = st.weapon === 'shotgun' ? '' : st.weapon === 'all'
+            ? fmtNum(accuracyOf(st.mine), '%')
+            : (mine.shots ? fmtPct(100 * mine.total / mine.shots) : '–');
+        foot = '<div class="muted body-foot">' + mine.total + ' impactos' + (acc ? ' · precisión ' + acc + (st.weapon === 'all' ? ' (sin escopetas)' : '') : '') + '.' +
             (mine.total < MIN_HITS_FOR_PCT ? ' Son pocos impactos: los porcentajes todavía no dicen mucho.' : '') + '</div>';
     }
     return '<div class="table-wrap"><table class="compare"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></div>' + foot;
@@ -194,7 +197,7 @@ function renderBodyPanel(host, opts) {
             seg([['ct', 'CT'], ['t', 'TT']], bodyTeam, 'team') +
         '</div>' +
         '<div class="body-figs' + (st.mode === 'compare' ? ' two' : '') + '">' + figs + '</div>' +
-        bodyTable(mine, avg, st.mode);
+        bodyTable(mine, avg, st.mode, st);
 
     host.querySelectorAll('[data-fn]').forEach(el => {
         const fn = el.dataset.fn;

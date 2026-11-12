@@ -61,7 +61,7 @@ function confirmBlock(steamId, name, level) {
         return '<div class="confirm-box confirmed">' +
             '<div><strong>Confirmado como cheater</strong> por el staff el ' + fmtDate(conf.date) +
             (conf.note ? '<div class="muted" style="margin-top:2px;">' + esc(conf.note) + '</div>' : '') + '</div>' +
-            '<button class="btn" onclick="setConfirmed(\'' + steamId + '\', false)">Quitar confirmación</button></div>';
+            '<button class="btn" onclick="toggleConfirmed(\'' + steamId + '\', false)">Quitar confirmación</button></div>';
     }
     const hint = level === 'cheat' || level === 'sospechoso'
         ? 'La app solo marca indicios. Si viste la demo y es cheat, confirmalo: queda guardado para este SteamID.'
@@ -70,11 +70,13 @@ function confirmBlock(steamId, name, level) {
         '<div class="muted">' + hint + '</div>' +
         '<div class="confirm-form">' +
             '<input class="input" id="confirmNote-' + steamId + '" placeholder="Nota (opcional): qué viste, en qué ronda" style="flex:1;">' +
-            '<button class="btn btn-danger" onclick="setConfirmed(\'' + steamId + '\', true, \'' + esc(String(name).replace(/['\\]/g, '')) + '\')">Confirmar cheater</button>' +
+            '<button class="btn btn-danger" onclick="toggleConfirmed(\'' + steamId + '\', true, \'' + esc(String(name).replace(/['\\]/g, '')) + '\')">Confirmar cheater</button>' +
         '</div></div>';
 }
 
-function setConfirmed(steamId, on, name) {
+// Not named setConfirmed: that is the Go binding, and a page function with the same
+// name would replace it.
+function toggleConfirmed(steamId, on, name) {
     if (!window.setConfirmed) return;
     const noteEl = document.getElementById('confirmNote-' + steamId);
     const note = on && noteEl ? noteEl.value.trim() : '';

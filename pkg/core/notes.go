@@ -18,7 +18,8 @@ import (
 // can be added up across players and demos.
 type NoteCounts struct {
 	Hits, HeadHits int // bullets that hit an enemy, of them on the head or neck
-	Shots          int
+	AccHits        int // hits and shots for accuracy, without shotguns
+	AccShots       int // (see HitProfile.Accuracy)
 	Kills, HSKills int
 	ReactSumMs     float64 // triggerbot reaction samples, summed
 	ReactN         int
@@ -40,7 +41,8 @@ func CountsFromStats(p *PlayerStats) NoteCounts {
 	if h := p.Hits; h != nil {
 		c.Hits = h.Zones.Total().Hits
 		c.HeadHits = h.Zones.Head.Hits + h.Zones.Neck.Hits
-		c.Shots, c.Kills, c.HSKills = h.Shots, h.Kills, h.HeadshotKills
+		c.Kills, c.HSKills = h.Kills, h.HeadshotKills
+		c.AccHits, c.AccShots = h.Accuracy()
 	}
 	if p.TriggerAvgMs != nil && p.TriggerSamples > 0 {
 		c.ReactSumMs = float64(*p.TriggerAvgMs) * float64(p.TriggerSamples)
@@ -56,7 +58,8 @@ func CountsFromStats(p *PlayerStats) NoteCounts {
 func (c *NoteCounts) Add(o NoteCounts) {
 	c.Hits += o.Hits
 	c.HeadHits += o.HeadHits
-	c.Shots += o.Shots
+	c.AccHits += o.AccHits
+	c.AccShots += o.AccShots
 	c.Kills += o.Kills
 	c.HSKills += o.HSKills
 	c.ReactSumMs += o.ReactSumMs
@@ -97,12 +100,12 @@ func Notes(me, base NoteCounts, baseLabel string) []string {
 		}
 	}
 
-	// Accuracy
-	if me.Shots >= noteMinShots && base.Shots >= noteMinShots*noteBaseFactor {
-		mine, avg := pct(me.Hits, me.Shots), pct(base.Hits, base.Shots)
+	// Accuracy (shotguns left out: several pellets per shot)
+	if me.AccShots >= noteMinShots && base.AccShots >= noteMinShots*noteBaseFactor {
+		mine, avg := pct(me.AccHits, me.AccShots), pct(base.AccHits, base.AccShots)
 		if mine >= 40 && mine >= avg*1.6 {
 			out = append(out, fmt.Sprintf("Acertó el %s de sus tiros (%d de %d); %s: %s.",
-				fmtP(mine), me.Hits, me.Shots, baseLabel, fmtP(avg)))
+				fmtP(mine), me.AccHits, me.AccShots, baseLabel, fmtP(avg)))
 		}
 	}
 
@@ -165,7 +168,8 @@ func MatchNotes(players []PlayerStats) {
 func (c NoteCounts) without(o NoteCounts) NoteCounts {
 	c.Hits -= o.Hits
 	c.HeadHits -= o.HeadHits
-	c.Shots -= o.Shots
+	c.AccHits -= o.AccHits
+	c.AccShots -= o.AccShots
 	c.Kills -= o.Kills
 	c.HSKills -= o.HSKills
 	c.ReactSumMs -= o.ReactSumMs

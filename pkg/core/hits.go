@@ -1,5 +1,7 @@
 package core
 
+import "encoding/json"
+
 // Hits and damage per body zone, from the hit group the game reports with each
 // bullet that damages an enemy. Only bullet weapons count (no knife, grenades, fire
 // or zeus) and only damage to enemies.
@@ -20,11 +22,12 @@ const (
 
 // Weapon classes used to split hits.
 const (
-	WeaponRifle  = "rifle"
-	WeaponSniper = "sniper"
-	WeaponPistol = "pistol"
-	WeaponSMG    = "smg"
-	WeaponHeavy  = "heavy" // shotguns and machine guns
+	WeaponRifle   = "rifle"
+	WeaponSniper  = "sniper"
+	WeaponPistol  = "pistol"
+	WeaponSMG     = "smg"
+	WeaponShotgun = "shotgun"
+	WeaponHeavy   = "heavy" // machine guns
 )
 
 // ZoneCount is how many bullets hit a zone and the health they took.
@@ -85,6 +88,20 @@ func (b *BodyZones) Add(o BodyZones) {
 	for i := range dst {
 		dst[i].add(*src[i])
 	}
+}
+
+// MarshalJSON writes only the zones that were hit: there is one of these per player,
+// per weapon class and per demo in the history, and most zones of most classes are 0.
+// Reading needs nothing special: missing zones stay at zero.
+func (b BodyZones) MarshalJSON() ([]byte, error) {
+	m := map[string]ZoneCount{}
+	names := []string{"head", "neck", "chest", "stomach", "leftArm", "rightArm", "leftLeg", "rightLeg", "other"}
+	for i, z := range b.all() {
+		if *z != (ZoneCount{}) {
+			m[names[i]] = *z
+		}
+	}
+	return json.Marshal(m)
 }
 
 // Total sums every zone.
@@ -158,6 +175,20 @@ func (h *HitProfile) Merge(o *HitProfile) {
 		dst.Shots += w.Shots
 		dst.Zones.Add(w.Zones)
 	}
+}
+
+// Accuracy returns hits and shots without shotguns: one shell fires several pellets
+// and each pellet that lands counts as a hit, so with them hits can exceed shots.
+func (h *HitProfile) Accuracy() (hits, shots int) {
+	if h == nil {
+		return 0, 0
+	}
+	hits, shots = h.Zones.Total().Hits, h.Shots
+	if sg := h.ByClass[WeaponShotgun]; sg != nil {
+		hits -= sg.Zones.Total().Hits
+		shots -= sg.Shots
+	}
+	return hits, shots
 }
 
 // Empty reports whether nothing was recorded.

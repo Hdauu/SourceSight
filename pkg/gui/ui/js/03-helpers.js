@@ -42,15 +42,19 @@ function typeTag(type) {
 // Fewer hits than this say nothing about where someone aims (same as the Go side).
 const MIN_HITS_FOR_PCT = 10;
 
+// Zones never hit are not in the data (Go leaves them out), so a missing one counts 0.
+function zoneHits(zones, key) { return ((zones || {})[key] || {}).hits || 0; }
+
 function hitTotals(h) {
     if (!h || !h.zones) return null;
     const z = h.zones;
-    const total = Object.keys(z).reduce((s, k) => s + z[k].hits, 0);
+    const total = Object.keys(z).reduce((s, k) => s + zoneHits(z, k), 0);
+    const head = zoneHits(z, 'head') + zoneHits(z, 'neck');
     return {
         total: total,
-        head: z.head.hits + z.neck.hits,
-        headPct: total >= MIN_HITS_FOR_PCT ? Math.round(1000 * (z.head.hits + z.neck.hits) / total) / 10 : null,
-        accuracy: h.shots > 0 ? Math.round(1000 * total / h.shots) / 10 : null
+        head: head,
+        headPct: total >= MIN_HITS_FOR_PCT ? Math.round(1000 * head / total) / 10 : null,
+        accuracy: accuracyOf(h)
     };
 }
 
@@ -62,4 +66,15 @@ function notesBlock(notes, title) {
         '<ul>' + notes.map(n => '<li>' + esc(n) + '</li>').join('') + '</ul>' +
         '<div class="notes-foot">Solo informativo: no cambia el resultado. Conviene confirmarlo mirando la demo.</div>' +
     '</div>';
+}
+
+// Accuracy without shotguns: several pellets per shell can each count as a hit
+// (same as HitProfile.Accuracy in Go). Null when there is nothing to measure.
+function accuracyOf(h) {
+    if (!h || !h.zones) return null;
+    const hitsOf = zones => Object.keys(zones || {}).reduce((s, k) => s + zoneHits(zones, k), 0);
+    let hits = hitsOf(h.zones), shots = h.shots || 0;
+    const sg = (h.byClass || {}).shotgun;
+    if (sg) { hits -= hitsOf(sg.zones); shots -= sg.shots || 0; }
+    return shots > 0 ? Math.round(1000 * hits / shots) / 10 : null;
 }

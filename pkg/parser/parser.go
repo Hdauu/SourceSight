@@ -673,6 +673,8 @@ func bulletClass(w *common.Equipment) string {
 	switch w.Type {
 	case common.EqAWP, common.EqScout, common.EqG3SG1, common.EqScar20:
 		return core.WeaponSniper
+	case common.EqNova, common.EqXM1014, common.EqSawedOff, common.EqSwag7:
+		return core.WeaponShotgun
 	case common.EqZeus:
 		return ""
 	}

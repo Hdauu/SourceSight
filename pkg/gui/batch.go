@@ -161,9 +161,11 @@ func (a *app) processQueue(paths []string, force bool) {
 		a.call("batchStart", rows, info)
 	}
 
-	// Emitter
-	emitDone := make(chan struct{})
+	// Emitter. emitStopped lets the final result wait for it: an update sent after
+	// the summary would put the page back in "analyzing".
+	emitDone, emitStopped := make(chan struct{}), make(chan struct{})
 	go func() {
+		defer close(emitStopped)
 		t := time.NewTicker(200 * time.Millisecond)
 		defer t.Stop()
 		for {
@@ -217,7 +219,7 @@ func (a *app) processQueue(paths []string, force bool) {
 	var lastReport *core.DemoReport
 	var lastMeta reportMeta
 	for res := range results {
-		rep, meta, err := a.commitOne(b, res, force)
+		rep, meta, err := a.safeCommit(b, res, force)
 		if err == nil && rep != nil {
 			lastReport, lastMeta = rep, meta
 			a.call("refreshHistory")
@@ -233,6 +235,7 @@ func (a *app) processQueue(paths []string, force bool) {
 	b.dirty = true
 	b.mu.Unlock()
 	close(emitDone)
+	<-emitStopped
 
 	rows, info, _ := b.snapshot(true)
 	info.Done = true
@@ -303,6 +306,20 @@ func (a *app) parseOne(b *batch, i int, path string, force bool) (res parsed) {
 		},
 	})
 	return res
+}
+
+// safeCommit runs commitOne so that an unexpected failure while storing one demo
+// marks that demo as failed instead of closing the app.
+func (a *app) safeCommit(b *batch, res parsed, force bool) (rep *core.DemoReport, meta reportMeta, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("error interno guardando la demo: %v", r)
+			applog.Printf("cola: %s: %v", filepath.Base(res.path), err)
+			b.update(res.i, func(row *batchRow) { row.State, row.Pct, row.Error = stError, 100, err.Error() })
+			rep = nil
+		}
+	}()
+	return a.commitOne(b, res, force)
 }
 
 // commitOne is the serial part: duplicate questions, history and reoffender database.

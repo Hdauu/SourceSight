@@ -1,6 +1,10 @@
 package core
 
-import "testing"
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+)
 
 func TestHitProfile(t *testing.T) {
 	var h HitProfile
@@ -77,5 +81,45 @@ func TestPingSpikes(t *testing.T) {
 	}
 	if high.Spiking() {
 		t.Fatal("steady high ping is not a spike")
+	}
+}
+
+// Shotgun pellets would push accuracy over 100%: they are left out of it.
+func TestAccuracyWithoutShotguns(t *testing.T) {
+	var h HitProfile
+	for range 4 {
+		h.AddShot(WeaponRifle)
+	}
+	h.AddHit(WeaponRifle, HitGroupChest, 27)
+	h.AddShot(WeaponShotgun)
+	for range 6 { // six pellets of one shell
+		h.AddHit(WeaponShotgun, HitGroupChest, 20)
+	}
+	if hits, shots := h.Accuracy(); hits != 1 || shots != 4 {
+		t.Fatalf("accuracy = %d/%d, want 1/4", hits, shots)
+	}
+	if h.Zones.Chest.Hits != 7 {
+		t.Fatalf("pellets must still count for the body zones, chest = %d", h.Zones.Chest.Hits)
+	}
+}
+
+// Zones that were never hit are left out of the JSON and come back as zero.
+func TestBodyZonesJSON(t *testing.T) {
+	var h HitProfile
+	h.AddShot(WeaponRifle)
+	h.AddHit(WeaponRifle, HitGroupHead, 100)
+	b, err := json.Marshal(&h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "chest") || !strings.Contains(string(b), `"head":{"hits":1,"damage":100}`) {
+		t.Fatalf("json = %s", b)
+	}
+	var back HitProfile
+	if err := json.Unmarshal(b, &back); err != nil {
+		t.Fatal(err)
+	}
+	if back.Zones.Head != (ZoneCount{1, 100}) || back.Zones.Chest != (ZoneCount{}) || back.ByClass[WeaponRifle].Zones.Head.Hits != 1 {
+		t.Fatalf("round trip = %+v", back)
 	}
 }

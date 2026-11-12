@@ -7,7 +7,7 @@ import (
 
 // typical is a normal player's demo: ~17% head, ~25% accuracy, 250 ms reaction.
 func typical() NoteCounts {
-	return NoteCounts{Hits: 60, HeadHits: 10, Shots: 240, Kills: 15, HSKills: 6,
+	return NoteCounts{Hits: 60, HeadHits: 10, AccHits: 60, AccShots: 240, Kills: 15, HSKills: 6,
 		ReactSumMs: 250 * 12, ReactN: 12, Engagements: 30, Prefires: 2, PingSum: 30, PingN: 1, PingMax: 40}
 }
 
@@ -28,7 +28,7 @@ func TestNotesQuietForNormalPlayer(t *testing.T) {
 func TestNotesFlagOutliers(t *testing.T) {
 	me := typical()
 	me.HeadHits = 30                     // 50% head
-	me.Shots = 100                       // 60% accuracy
+	me.AccHits, me.AccShots = 60, 100    // 60% accuracy
 	me.HSKills = 14                      // 14/15 kills HS
 	me.ReactSumMs, me.ReactN = 90*12, 12 // 90 ms
 	me.Prefires = 8                      // 27%: below the flag, well above the rest
@@ -48,7 +48,7 @@ func TestNotesFlagOutliers(t *testing.T) {
 
 func TestNotesNeedEnoughData(t *testing.T) {
 	// Every bullet to the head, but only 5 hits: says nothing
-	me := NoteCounts{Hits: 5, HeadHits: 5, Shots: 10, Kills: 3, HSKills: 3}
+	me := NoteCounts{Hits: 5, HeadHits: 5, AccHits: 5, AccShots: 10, Kills: 3, HSKills: 3}
 	if n := Notes(me, base(), "el resto"); len(n) != 0 {
 		t.Fatalf("too little data still produced notes: %q", n)
 	}

@@ -110,7 +110,7 @@ func copyFile(t *testing.T, src, dst string) {
 // them: every demo must be stored once and the copy must trigger the duplicate
 // question (answered "skip").
 //
-// SOURCESIGHT_TEST_DEMOS=D:\demos go test ./pkg/gui -run Batch -v
+// SOURCESIGHT_TEST_DEMOS=<carpeta-con-demos> go test ./pkg/gui -run Batch -v
 func TestBatchEndToEnd(t *testing.T) {
 	demos := testDemos(t, 4)
 	dupe := filepath.Join(t.TempDir(), "copia renombrada.dem")

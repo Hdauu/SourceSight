@@ -65,3 +65,26 @@ func TestPageAssembled(t *testing.T) {
 		t.Error("styles or scripts missing from the assembled page")
 	}
 }
+
+// TestBindingsNotShadowed: a page function with the same name as a Go binding
+// replaces the binding (both live on window), so the page would call itself instead
+// of Go. This broke "Ver en juego", "Actualizar" and "Confirmar cheater" before.
+func TestBindingsNotShadowed(t *testing.T) {
+	src, err := os.ReadFile("app.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bindings := regexp.MustCompile(`\.Bind\("(\w+)"`).FindAllStringSubmatch(string(src), -1)
+	if len(bindings) < 10 {
+		t.Fatalf("found only %d bindings in app.go; did the Bind call change?", len(bindings))
+	}
+	declared := map[string]bool{}
+	for _, m := range regexp.MustCompile(`(?m)^\s*(?:async\s+)?function\s+(\w+)\s*\(|^\s*(?:const|let|var)\s+(\w+)\s*=`).FindAllStringSubmatch(AppHTML, -1) {
+		declared[m[1]+m[2]] = true
+	}
+	for _, b := range bindings {
+		if declared[b[1]] {
+			t.Errorf("page declares %q, which shadows the Go binding of the same name", b[1])
+		}
+	}
+}

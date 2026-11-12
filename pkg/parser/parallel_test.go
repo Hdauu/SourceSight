@@ -13,7 +13,7 @@ import (
 // and requires identical reports: any state shared between analyses would show up
 // as a difference here (and as a data race under -race).
 //
-// Needs demos: SOURCESIGHT_TEST_DEMOS=D:\demos go test ./pkg/parser -run Parallel -v
+// Needs demos: SOURCESIGHT_TEST_DEMOS=<carpeta-con-demos> go test ./pkg/parser -run Parallel -v
 func TestParallelMatchesSequential(t *testing.T) {
 	dir := os.Getenv("SOURCESIGHT_TEST_DEMOS")
 	if dir == "" {

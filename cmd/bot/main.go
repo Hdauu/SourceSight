@@ -200,19 +200,7 @@ func main() {
 		elapsed := time.Since(start)
 
 		// Same match analyzed before (here or in the app): show it, don't count it twice
-		dupNote := ""
-		storeMu.Lock()
-		if similar := history.FindSimilar(rep, ""); len(similar) > 0 {
-			dupNote = fmt.Sprintf("Esta partida ya se analizó el %s (`%s`): no se suma de nuevo a los promedios ni a reincidencias.",
-				shortDate(similar[0].AnalyzedAt), similar[0].DemoName)
-		} else {
-			sha, _ := history.FileSHA256(tempDem)
-			if _, err := history.Save(tempDem, rep, sha); err != nil {
-				fmt.Printf("[-] No se pudo guardar en el historial: %v\n", err)
-			}
-			db.GetDatabase().RecordReport(rep)
-		}
-		storeMu.Unlock()
+		dupNote := saveToHistory(rep, tempDem)
 
 		// Render PNG
 		tempPng := filepath.Join(tempDir, fmt.Sprintf("report_%d.png", time.Now().UnixNano()))
@@ -375,4 +363,24 @@ func notesField(rep *core.DemoReport) string {
 		out += l
 	}
 	return out
+}
+
+// saveToHistory saves an analyzed demo to the history and the reoffender database,
+// unless the same match is already there; it then returns a note for the message.
+// One at a time (storeMu): two copies of a match analyzed together must not both
+// be counted. The file hash, the slow part, is computed before taking the turn, and
+// the turn is released even if saving fails unexpectedly.
+func saveToHistory(rep *core.DemoReport, demPath string) string {
+	sha, _ := history.FileSHA256(demPath)
+	storeMu.Lock()
+	defer storeMu.Unlock()
+	if similar := history.FindSimilar(rep, ""); len(similar) > 0 {
+		return fmt.Sprintf("Esta partida ya se analizó el %s (`%s`): no se suma de nuevo a los promedios ni a reincidencias.",
+			shortDate(similar[0].AnalyzedAt), similar[0].DemoName)
+	}
+	if _, err := history.Save(demPath, rep, sha); err != nil {
+		fmt.Printf("[-] No se pudo guardar en el historial: %v\n", err)
+	}
+	db.GetDatabase().RecordReport(rep)
+	return ""
 }
