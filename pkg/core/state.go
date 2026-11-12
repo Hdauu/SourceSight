@@ -133,6 +133,7 @@ type PlayerState struct {
 	Hits       HitProfile
 	Ping       PingData
 	Shift      ShiftData
+	Path       PlayerPath // minimap, see mapdata.go
 }
 
 func NewPlayerState(name string, steamID uint64) *PlayerState {
@@ -414,7 +415,8 @@ type DemoReport struct {
 	Header   DemoHeader         `json:"header"`
 	Players  []PlayerStats      `json:"players"`
 	AdminLog []AdminEvent       `json:"adminLog"`
-	ShiftLog []ShiftCase        `json:"shiftLog"` // walking near unseen enemies, see shift.go (null: none; missing: older analysis)
+	ShiftLog []ShiftCase        `json:"shiftLog"`      // walking near unseen enemies, see shift.go (null: none; missing: older analysis)
+	Map      *MapData           `json:"map,omitempty"` // positions for the minimap, see mapdata.go
 	ChatLog  []ChatMessageEntry `json:"chatLog"`
 	Timeline []TimelineIncident `json:"timeline"`
 }

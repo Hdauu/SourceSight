@@ -110,6 +110,7 @@ function loadDemoReport(report, meta) {
     shiftPlayer = '';
     shiftShown = 25;
     renderShift();
+    renderMapCard();
     renderHistory();
     document.getElementById('main').scrollTop = 0;
 }

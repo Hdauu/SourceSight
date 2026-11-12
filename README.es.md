@@ -33,6 +33,7 @@ Funciona en Windows, todo en tu PC. No se sube nada a ningún lado.
 - [Ping y lag](#ping-y-lag)
 - [Observaciones automáticas](#observaciones-automáticas)
 - [Registro de SHIFT](#registro-de-shift)
+- [Mapa](#mapa)
 - [Admins y chat](#admins-y-chat)
 - [Historial y demos repetidas](#historial-y-demos-repetidas)
 - [Jugadores: promedios entre demos](#jugadores-promedios-entre-demos)
@@ -412,6 +413,32 @@ Se muestran en el detalle del jugador, en su ficha y en el mensaje del bot de Di
 
 **Límites.** El dato de "visto" es la aproximación del juego, no la geometría exacta. Y el registro no distingue si el jugador camina porque escuchó al rival, porque es la jugada del equipo o porque sabe dónde está: eso solo se ve mirando la demo.
 
+## Mapa
+
+`pkg/radar`, `pkg/core/mapdata.go`, `pkg/gui/ui/js/18-map.js`
+
+**Qué es.** La partida dibujada sobre el radar del mapa, en el reporte de cada demo (sección **"Mapa"**).
+
+**De dónde sale el radar.** De **tu CS:GO instalado**: la imagen del radar y su archivo de posición están en `csgo\resource\overviews`. SourceSight no trae imágenes de Valve: las lee de tu juego, las convierte a PNG una sola vez y las guarda en `%APPDATA%\SourceSight\radar`. Por eso hace falta configurar la carpeta de CS:GO en Configuración (si no, intenta encontrarla sola). Los mapas con varios pisos (como Nuke) tienen un selector **Arriba / Abajo**, y cada punto va al piso que corresponde según su altura.
+
+**Qué se guarda en el análisis.**
+- Cada kill, con la posición exacta del que mata y del que muere, el arma y si fue headshot.
+- El recorrido de cada jugador: una muestra de su posición por segundo mientras está vivo.
+- No cuenta el calentamiento. Un partido completo suma unos 300 KB al reporte (unos 100 KB comprimido).
+
+**Capas** (se prenden y apagan por separado):
+- **Kills y muertes:** un círculo del color del equipo donde estaba el que mató, una cruz donde murió la víctima y una línea entre los dos. Con un jugador elegido, sus muertes van en rojo.
+- **Recorrido:** por dónde se movió. Con un jugador elegido, su recorrido en blanco; con todos, los de todos más tenues. La línea se corta al morir, al cambiar de ronda o de piso.
+- **Mapa de calor:** dónde pasaron más tiempo, con la misma escala de colores que la figura del cuerpo.
+- **Incidentes:** un rombo donde estaba el jugador en cada incidente (rojo para triggerbot, silent aim y wallhack; amarillo para el resto).
+- **SHIFT:** un triángulo donde empezó cada caso del registro de SHIFT, con una línea punteada hasta cada enemigo que no veía.
+
+**Filtros.** Por jugador y por ronda. Desde el detalle de un jugador, **Ver en el mapa** abre el mapa filtrado por él con su recorrido.
+
+**Click en un punto.** Muestra qué pasó (quién mató a quién, con qué arma y a qué distancia; o el incidente; o el caso de SHIFT) y el botón **Ver** para abrirlo en el juego.
+
+**Límites.** Las posiciones de los incidentes y de los casos de SHIFT salen de la muestra más cercana del recorrido, así que pueden estar corridas hasta medio segundo de movimiento. Las de las kills son exactas.
+
 ## Admins y chat
 
 `pkg/modules/staff.go`, `pkg/modules/chat.go`
@@ -559,6 +586,7 @@ Sin `-X sourcesight/pkg/version.Version=vX.Y.Z` en `-ldflags` la versión queda 
 | `pkg/history`, `pkg/db` | Historial, promedios por jugador y reincidentes |
 | `pkg/gui` | La ventana; la página está en `pkg/gui/ui` (HTML, CSS y JS separados) |
 | `pkg/launcher` | Ver en juego |
+| `pkg/radar` | Radares del juego instalado para el mapa |
 
 `third_party/go-webview2` es una copia de [jchv/go-webview2](https://github.com/jchv/go-webview2) (MIT) con un parche chico para recibir la ruta real de los archivos que se sueltan en la ventana. El detalle está en `third_party/go-webview2/SOURCESIGHT_PATCH.md`.
 

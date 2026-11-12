@@ -36,6 +36,10 @@ function openPlayer(p) {
         '</div>';
     if (hasSteam) html += '<div>' + confirmBlock(sid, p.name, levelOf(p)) + '</div>';
     html += notesBlock(p.notes);
+    if (currentReport.map && (currentReport.map.paths || []).some(x => x.steamId === sid)) {
+        html += '<div class="callout"><span class="grow">Su recorrido, sus kills y muertes sobre el radar del mapa.</span>' +
+            '<button class="btn" onclick="showOnMap(\'' + sid + '\')">Ver en el mapa</button></div>';
+    }
     if (p.shiftCases) {
         html += '<div class="callout"><span class="grow">Caminó con shift cerca de un enemigo que no veía en ' + p.shiftCases + (p.shiftCases === 1 ? ' momento' : ' momentos') + ' de la partida.</span>' +
             '<button class="btn" onclick="showShiftOf(\'' + sid + '\')">Ver en el registro</button></div>';

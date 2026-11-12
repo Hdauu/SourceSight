@@ -84,4 +84,5 @@ func KnownFlags() []string {
 //	   that exists (18 s, same round) and lies between killer and victim, bullets per
 //	   round, wallhack and revenge windows scaled to the demo tickrate
 //	5: SHIFT log (walking near unseen enemies); chat spam window scaled to the tickrate
-const AnalysisVersion = 5
+//	6: positions for the minimap (kills and once-per-second paths)
+const AnalysisVersion = 6

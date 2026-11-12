@@ -250,6 +250,29 @@
                         </div>
                     </section>
 
+                    <!-- Minimap on the game's own radar (js/18-map.js) -->
+                    <section class="panel" id="mapCard">
+                        <div class="panel-head">
+                            <div class="panel-title">Mapa</div>
+                            <div class="map-filters">
+                                <select class="input" id="mapPlayer" onchange="setMapFilter('player', this.value)" aria-label="Jugador"></select>
+                                <select class="input" id="mapRound" onchange="setMapFilter('round', this.value)" aria-label="Ronda"></select>
+                                <div class="seg" id="mapFloor"></div>
+                            </div>
+                        </div>
+                        <div class="map-layers" id="mapLayers"></div>
+                        <div class="map-wrap">
+                            <div class="map-stage">
+                                <canvas id="mapCanvas" width="1024" height="1024"></canvas>
+                                <div class="map-empty muted" id="mapEmpty"></div>
+                            </div>
+                            <div class="map-side">
+                                <div class="map-legend" id="mapLegend"></div>
+                                <div class="map-info" id="mapInfo"><span class="muted">Hacé click en un punto del mapa para ver qué pasó y abrirlo en el juego.</span></div>
+                            </div>
+                        </div>
+                    </section>
+
                     <section class="panel" id="adminCard">
                         <div class="panel-head">
                             <div class="panel-title">Comandos de admins <span class="count" id="adminCount"></span></div>

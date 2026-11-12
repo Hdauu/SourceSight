@@ -90,6 +90,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 	var adminLog []core.AdminEvent
 	var roundStarts []int
 	var recentDeaths []modules.DeathRecord
+	var mapKills []core.MapKill
 	var activeSmokes []modules.SmokeVolume
 	roundBullets := make(map[string]int)
 	currentRound := 0
@@ -228,6 +229,20 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 				core.Vec3{X: vpos.X, Y: vpos.Y, Z: vpos.Z})
 		}
 
+		if e.Killer != nil && e.Killer != e.Victim && currentRound > 0 && !p.GameState().IsWarmupPeriod() {
+			kp, vp := e.Killer.Position(), e.Victim.Position()
+			k := core.MapKill{
+				Tick: tick, Killer: e.Killer.Name, KillerID: e.Killer.SteamID64, KillerTeam: int(e.Killer.Team),
+				Victim: e.Victim.Name, VictimID: e.Victim.SteamID64, VictimTeam: int(e.Victim.Team),
+				Headshot: e.IsHeadshot,
+				KX:       int(kp.X), KY: int(kp.Y), KZ: int(kp.Z), VX: int(vp.X), VY: int(vp.Y), VZ: int(vp.Z),
+			}
+			if e.Weapon != nil {
+				k.Weapon = e.Weapon.String()
+			}
+			mapKills = append(mapKills, k)
+		}
+
 		if e.Killer != nil {
 			recentDeaths = append(recentDeaths, modules.DeathRecord{
 				KillerName: e.Killer.Name,
@@ -351,6 +366,11 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 			for _, pl := range gs.Participants().Playing() {
 				if st := getState(pl); st != nil && pl.IsAlive() {
 					st.Ping.Sample(pl.Ping())
+					// Minimap path, same once-per-second rate; not during warmup
+					if currentRound > 0 && !gs.IsWarmupPeriod() {
+						pos := pl.Position()
+						st.Path.AddSample(tick, core.Vec3{X: pos.X, Y: pos.Y, Z: pos.Z})
+					}
 				}
 			}
 		}
@@ -662,6 +682,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		Players:  playerStats,
 		AdminLog: adminLog,
 		ShiftLog: shiftLog,
+		Map:      mapData(states, mapKills, tickrate),
 		ChatLog:  chatLog,
 		Timeline: timeline,
 	}
@@ -752,4 +773,28 @@ func semiAutoPistol(w *common.Equipment) bool {
 		return true
 	}
 	return false
+}
+
+// mapData gathers the minimap positions. Paths are sorted by name so the same demo
+// always yields the same report.
+func mapData(states map[string]*core.PlayerState, kills []core.MapKill, tickrate int) *core.MapData {
+	md := &core.MapData{Kills: kills, Every: tickrate}
+	for _, st := range states {
+		if len(st.Path.Points) == 0 || st.SteamID == 0 {
+			continue
+		}
+		path := st.Path
+		path.SteamID, path.Name = st.SteamID, st.Name
+		md.Paths = append(md.Paths, path)
+	}
+	sort.Slice(md.Paths, func(i, j int) bool {
+		if md.Paths[i].Name != md.Paths[j].Name {
+			return md.Paths[i].Name < md.Paths[j].Name
+		}
+		return md.Paths[i].SteamID < md.Paths[j].SteamID
+	})
+	if md.Kills == nil {
+		md.Kills = []core.MapKill{}
+	}
+	return md
 }

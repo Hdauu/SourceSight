@@ -21,6 +21,7 @@ import (
 	"sourcesight/pkg/evidence"
 	"sourcesight/pkg/history"
 	"sourcesight/pkg/launcher"
+	"sourcesight/pkg/radar"
 	"sourcesight/pkg/report"
 	"sourcesight/pkg/steamid"
 	"sourcesight/pkg/update"
@@ -495,6 +496,22 @@ func LaunchApp(initialDemoPath string) error {
 		cfg := launcher.LoadConfig()
 		cfg.SidebarWidth = width
 		return launcher.SaveConfig(cfg)
+	})
+
+	// getRadar returns the radar of a map from the installed CS:GO, for the minimap.
+	_ = w.Bind("getRadar", func(mapName string) (map[string]any, error) {
+		dir := launcher.LoadConfig().CSGOPath
+		if dir == "" {
+			dir, _ = launcher.FindCSGODirectory()
+		}
+		if dir == "" {
+			return map[string]any{"error": "Configurá la carpeta de CS:GO en Configuración para ver el radar del mapa."}, nil
+		}
+		r, err := radar.Load(dir, mapName)
+		if err != nil {
+			return map[string]any{"error": err.Error()}, nil
+		}
+		return map[string]any{"radar": r}, nil
 	})
 
 	_ = w.Bind("browseCSGOPath", func() (string, error) {

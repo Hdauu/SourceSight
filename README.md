@@ -35,6 +35,7 @@ The app itself is in Spanish; this document describes it in English.
 - [Ping and lag](#ping-and-lag)
 - [Automatic observations](#automatic-observations)
 - [SHIFT log](#shift-log)
+- [Minimap](#minimap)
 - [Admins and chat](#admins-and-chat)
 - [History and duplicate demos](#history-and-duplicate-demos)
 - [Players: averages across demos](#players-averages-across-demos)
@@ -415,6 +416,32 @@ They appear in the player detail, the player page and the Discord bot's message.
 
 **Limits.** "Spotted" is the game's approximation, not exact geometry. And the log can't tell whether the player walks because they heard the enemy, because it's the team's play or because they know where the enemy is: only watching the demo shows that.
 
+## Minimap
+
+`pkg/radar`, `pkg/core/mapdata.go`, `pkg/gui/ui/js/18-map.js`
+
+**What it is.** The match drawn on the map's radar, in each demo report (the **"Mapa"** section).
+
+**Where the radar comes from.** From **your installed CS:GO**: the radar image and its position file are in `csgo\resource\overviews`. SourceSight ships no Valve images: it reads them from your game, converts them to PNG once and keeps them in `%APPDATA%\SourceSight\radar`. That's why the CS:GO folder must be set in Settings (otherwise it tries to find it on its own). Maps with several floors (like Nuke) have an **Arriba / Abajo** (upper / lower) selector, and each point goes on the floor that matches its height.
+
+**What the analysis stores.**
+- Every kill, with the exact position of killer and victim, the weapon and whether it was a headshot.
+- Each player's path: one position sample per second while alive.
+- Warmup doesn't count. A full match adds about 300 KB to the report (about 100 KB compressed).
+
+**Layers** (toggled independently):
+- **Kills and deaths:** a circle in the team color where the killer stood, a cross where the victim died and a line between them. With one player selected, their deaths are red.
+- **Path:** where they moved. With one player selected, their path in white; with everyone, all paths fainter. The line breaks on death, a new round or a floor change.
+- **Heatmap:** where they spent the most time, with the same color scale as the body figure.
+- **Incidents:** a diamond where the player was at each incident (red for triggerbot, silent aim and wallhack; yellow for the rest).
+- **SHIFT:** a triangle where each SHIFT log case started, with a dashed line to each enemy they couldn't see.
+
+**Filters.** By player and by round. From a player's detail, **Ver en el mapa** opens the map filtered to them with their path.
+
+**Click a point.** Shows what happened (who killed whom, with what weapon and from how far; or the incident; or the SHIFT case) and the **Ver** button to open it in the game.
+
+**Limits.** Incident and SHIFT case positions come from the nearest path sample, so they can be off by up to half a second of movement. Kill positions are exact.
+
 ## Admins and chat
 
 `pkg/modules/staff.go`, `pkg/modules/chat.go`
@@ -562,6 +589,7 @@ Without `-X sourcesight/pkg/version.Version=vX.Y.Z` in `-ldflags` the version is
 | `pkg/history`, `pkg/db` | History, per-player averages and reoffenders |
 | `pkg/gui` | The window; the page is in `pkg/gui/ui` (separate HTML, CSS and JS) |
 | `pkg/launcher` | Watch in game |
+| `pkg/radar` | Radars from the installed game for the minimap |
 
 `third_party/go-webview2` is a copy of [jchv/go-webview2](https://github.com/jchv/go-webview2) (MIT) with a small patch to receive the real path of files dropped on the window. Details in `third_party/go-webview2/SOURCESIGHT_PATCH.md`.
 
