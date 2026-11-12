@@ -29,16 +29,15 @@ func CheckKillAnomalies(
 		})
 	}
 
-	// Smoke penetration check
-	fwd := core.Normalize(core.Vec3{
-		X: victimPos.X - attackerEye.X,
-		Y: victimPos.Y - attackerEye.Y,
-		Z: victimPos.Z - attackerEye.Z,
-	})
-
+	// Smoke between the killer and the victim, still there at the moment of the kill.
+	// The game removes smokes at round end without an event in the demo, so the time
+	// window, not the expiry event, decides whether a smoke exists.
 	throughSmoke := false
 	for _, s := range activeSmokes {
-		if core.RayIntersectsSphere(attackerEye, fwd, s.Pos, core.SmokeRadiusUnits) {
+		if tick < s.StartTick || tick >= s.ExpiryTick {
+			continue
+		}
+		if core.SegmentIntersectsSphere(attackerEye, victimPos, s.Pos, core.SmokeRadiusUnits) {
 			throughSmoke = true
 			break
 		}

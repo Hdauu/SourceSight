@@ -277,7 +277,10 @@ Cada detección explica: qué busca, qué datos usa, cómo calcula, cuándo marc
 
 **Datos.** Las granadas de humo activas (posición, inicio y fin), la posición de los ojos del asesino y de la víctima, y las balas que disparó el asesino en la ronda.
 
-**Cálculo.** Se traza la línea entre los ojos del asesino y la víctima. Si atraviesa un humo activo (una esfera de 144 unidades de radio) y el asesino disparó 3 balas o menos en la ronda, es una kill a través del humo con pocas balas: no fue spray a ciegas.
+**Cálculo.**
+- Se traza el segmento entre los ojos del asesino y la víctima. Solo cuenta un humo que esté **entre** los dos (una esfera de 144 unidades de radio): uno detrás de la víctima no tapa nada.
+- El humo tiene que existir en ese momento: un humo dura 18 s desde que se abre y desaparece al terminar la ronda. El juego borra los humos al cambiar de ronda sin dejar registro en la demo, por eso se usa la duración y no el aviso de fin del humo.
+- Si además el asesino disparó 3 balas o menos en la ronda, es una kill a través del humo con pocas balas: no fue spray a ciegas.
 
 **Cuándo marca.** Con 5 kills así en la partida.
 

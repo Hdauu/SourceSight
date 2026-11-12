@@ -279,7 +279,10 @@ Each detection explains: what it looks for, which data it uses, how it computes,
 
 **Data.** Active smoke grenades (position, start and end), the killer's eye position and the victim's, and the bullets the killer fired in the round.
 
-**Computation.** A line is drawn between the killer's eyes and the victim. If it crosses an active smoke (a sphere of 144 units radius) and the killer fired 3 bullets or fewer in the round, it's a kill through smoke with few bullets: not a blind spray.
+**Computation.**
+- A segment is drawn between the killer's eyes and the victim. Only a smoke **between** them counts (a sphere of 144 units radius): one behind the victim blocks nothing.
+- The smoke must exist at that moment: a smoke lasts 18 s from when it pops and disappears at round end. The game removes smokes on round change without recording it in the demo, so the duration is used rather than the smoke-end event.
+- If the killer also fired 3 bullets or fewer in the round, it's a kill through smoke with few bullets: not a blind spray.
 
 **When it flags.** With 5 such kills in the match.
 

@@ -112,24 +112,20 @@ func RayIntersectsAABB(origin, dir, boxMin, boxMax Vec3) bool {
 	return tMax >= 0
 }
 
-// RayIntersectsSphere performs analytic ray-sphere intersection.
-func RayIntersectsSphere(origin, dir, center Vec3, radius float64) bool {
-	oc := Vec3{
-		X: origin.X - center.X,
-		Y: origin.Y - center.Y,
-		Z: origin.Z - center.Z,
+// SegmentIntersectsSphere reports whether the straight line from a to b passes through
+// the sphere. Only the part between the two points counts: a sphere beyond b (behind
+// the target) or behind a doesn't block anything between them.
+func SegmentIntersectsSphere(a, b, center Vec3, radius float64) bool {
+	ab := Vec3{X: b.X - a.X, Y: b.Y - a.Y, Z: b.Z - a.Z}
+	ac := Vec3{X: center.X - a.X, Y: center.Y - a.Y, Z: center.Z - a.Z}
+	len2 := Dot(ab, ab)
+	t := 0.0
+	if len2 > 0 {
+		t = math.Max(0, math.Min(1, Dot(ac, ab)/len2))
 	}
-	a := Dot(dir, dir)
-	b := 2.0 * Dot(oc, dir)
-	c := Dot(oc, oc) - radius*radius
-	disc := b*b - 4.0*a*c
-	if disc < 0 {
-		return false
-	}
-	sqrtDisc := math.Sqrt(disc)
-	t1 := (-b - sqrtDisc) / (2.0 * a)
-	t2 := (-b + sqrtDisc) / (2.0 * a)
-	return t1 >= 0 || t2 >= 0
+	// Closest point of the segment to the centre
+	p := Vec3{X: a.X + t*ab.X - center.X, Y: a.Y + t*ab.Y - center.Y, Z: a.Z + t*ab.Z - center.Z}
+	return Dot(p, p) <= radius*radius
 }
 
 // NormalizeAngle normalizes angle delta to (-180, 180] degrees to prevent wrap-around false snaps.

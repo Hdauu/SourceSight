@@ -18,3 +18,23 @@ func TestSteamIDSerializedAsString(t *testing.T) {
 		t.Fatalf("round trip failed: %v %d", err, back.SteamID)
 	}
 }
+
+func TestSegmentIntersectsSphere(t *testing.T) {
+	a, b := Vec3{X: 0}, Vec3{X: 1000}
+	cases := []struct {
+		name   string
+		center Vec3
+		want   bool
+	}{
+		{"between", Vec3{X: 500, Y: 100}, true},
+		{"beside", Vec3{X: 500, Y: 200}, false},
+		{"behind the target", Vec3{X: 1300}, false},
+		{"behind the shooter", Vec3{X: -300}, false},
+		{"touching the target", Vec3{X: 1100}, true},
+	}
+	for _, c := range cases {
+		if got := SegmentIntersectsSphere(a, b, c.center, 144); got != c.want {
+			t.Errorf("%s: got %v", c.name, got)
+		}
+	}
+}

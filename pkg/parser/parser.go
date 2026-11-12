@@ -95,6 +95,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 	p.RegisterEventHandler(func(e events.RoundStart) {
 		currentRound++
 		clear(roundBullets) // "few bullets before the kill" (smoke kills) counts per round
+		activeSmokes = nil  // the game clears smokes between rounds without a SmokeExpired event
 		// Keep deaths inside the revenge window: admins often slay right after the round flips
 		curTick := p.GameState().IngameTick()
 		roundStarts = append(roundStarts, curTick)
@@ -133,7 +134,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 				Z: e.Position.Z,
 			},
 			StartTick:  p.GameState().IngameTick(),
-			ExpiryTick: p.GameState().IngameTick() + (18 * tickrate),
+			ExpiryTick: p.GameState().IngameTick() + 18*tickrate, // a CS:GO smoke lasts 18 s
 		})
 	})
 
