@@ -30,24 +30,27 @@ const maxEntries = 300
 // PlayerSummary is the per-player slice of a report kept in the index, enough to
 // aggregate players across demos without decoding every cached report.
 type PlayerSummary struct {
-	SteamID         string   `json:"steamId"`
-	Name            string   `json:"name"`
-	Flags           []string `json:"flags,omitempty"`
-	Level           string   `json:"level"`
-	TotalJumps      int      `json:"totalJumps"`
-	PerfRatio       float64  `json:"perfRatio"`
-	MaxStreak       int      `json:"maxStreak"`
-	TriggerAvgMs    *int     `json:"triggerAvgMs,omitempty"`
-	TriggerSamples  int      `json:"triggerSamples"`
-	SnapCount       int      `json:"snapCount"`
-	SilentCount     int      `json:"silentCount"`
-	WallTrackCount  int      `json:"wallTrackCount"`
-	MacroHits       int      `json:"macroHits"`
-	FlashKills      int      `json:"flashKills"`
-	SmokeKills      int      `json:"smokeKills"`
-	PeekEngagements int      `json:"peekEngagements,omitempty"`
-	Prefires        int      `json:"prefires,omitempty"`
-	Incidents       int      `json:"incidents"`
+	SteamID         string           `json:"steamId"`
+	Name            string           `json:"name"`
+	Flags           []string         `json:"flags,omitempty"`
+	Level           string           `json:"level"`
+	TotalJumps      int              `json:"totalJumps"`
+	PerfRatio       float64          `json:"perfRatio"`
+	MaxStreak       int              `json:"maxStreak"`
+	TriggerAvgMs    *int             `json:"triggerAvgMs,omitempty"`
+	TriggerSamples  int              `json:"triggerSamples"`
+	SnapCount       int              `json:"snapCount"`
+	SilentCount     int              `json:"silentCount"`
+	WallTrackCount  int              `json:"wallTrackCount"`
+	MacroHits       int              `json:"macroHits"`
+	FlashKills      int              `json:"flashKills"`
+	SmokeKills      int              `json:"smokeKills"`
+	PeekEngagements int              `json:"peekEngagements,omitempty"`
+	Prefires        int              `json:"prefires,omitempty"`
+	Incidents       int              `json:"incidents"`
+	LagDiscarded    int              `json:"lagDiscarded,omitempty"`
+	PingAvg         int              `json:"pingAvg,omitempty"`
+	Hits            *core.HitProfile `json:"hits,omitempty"`
 }
 
 type Entry struct {
@@ -194,6 +197,9 @@ func fillFromReport(e *Entry, rep *core.DemoReport) {
 			PeekEngagements: p.PeekEngagements,
 			Prefires:        p.Prefires,
 			Incidents:       len(p.Incidents),
+			LagDiscarded:    p.LagDiscarded,
+			PingAvg:         p.PingAvg,
+			Hits:            p.Hits,
 		})
 	}
 	derive(e)

@@ -52,6 +52,7 @@ function openPlayer(p) {
         stat('Teamflash', (p.teamflashSecs || 0).toFixed(1) + ' s', p.teamflashSecs >= 35 ? 't-yellow' : '') +
         stat('AFK', p.isAfk ? 'Sí' : 'No', p.isAfk ? 't-yellow' : '') +
         stat('Prefire', p.peekEngagements ? p.prefireRatio + '% de ' + p.peekEngagements : '–', (p.flags || []).includes('PREFIRE') ? 't-red' : (p.prefireRatio >= 30 && p.peekEngagements >= 10 ? 't-yellow' : '')) +
+        hitStats(p) +
         '</div></div>';
 
     const incs = p.incidents || [];
@@ -191,4 +192,22 @@ function copyBan(sid) {
     const reason = (p.flags || []).length ? p.flags.join(' + ') : 'confirmado por staff';
     const cmd = 'sm_ban #' + sid + ' 0 "SourceSight: ' + reason + '"';
     copyText(cmd, 'Comando de ban copiado');
+}
+
+// Hit and ping cells of the metrics grid.
+function hitStats(p) {
+    const t = hitTotals(p.hits);
+    let html = '';
+    if (t) {
+        html += stat('A la cabeza', t.headPct !== null ? t.headPct + '% de ' + t.total : (t.total ? t.head + ' de ' + t.total : '–')) +
+            stat('Precisión', t.accuracy !== null ? t.accuracy + '%' : '–') +
+            stat('Kills con HS', p.hits.kills ? p.hits.headshotKills + ' de ' + p.hits.kills : '–');
+    }
+    if (p.pingAvg) {
+        html += stat('Ping', p.pingAvg + ' ms' + (p.pingMax > p.pingAvg + 50 ? ' (pico ' + p.pingMax + ')' : ''));
+    }
+    if (p.lagDiscarded) {
+        html += stat('Reacciones con lag', p.lagDiscarded + ' descartadas');
+    }
+    return html;
 }

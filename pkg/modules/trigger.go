@@ -31,7 +31,10 @@ func ProcessTriggerTick(st *core.PlayerState, tick int, pitch, yaw float32, eyeP
 				deltaTicks := tick - *tr.CrosshairOnEnemyTick
 				deltaMs := float64(deltaTicks) * (1000.0 / float64(tickrate))
 
-				if deltaMs > 0 && deltaMs <= 1500.0 {
+				if deltaMs > 0 && deltaMs <= 1500.0 && st.Ping.Spiking() {
+					// Measured during a ping spike: bunched commands distort the timing
+					tr.LagDiscarded++
+				} else if deltaMs > 0 && deltaMs <= 1500.0 {
 					tr.ReactionDeltas = append(tr.ReactionDeltas, deltaMs)
 
 					// Only record in the Overwatch Incident Timeline if reaction is suspiciously inhuman (< 80ms)

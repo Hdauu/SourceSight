@@ -138,13 +138,15 @@ function openPlayerPage(steamId) {
                 compareRow('Perfs de bhop', a.perfRatio, g.perfRatio, '%', true, true) +
                 compareRow('Reacción (triggerbot)', a.reactionMs, g.reactionMs, ' ms', false) +
                 compareRow('Prefire: daño apenas aparece el rival', a.prefirePct, g.prefirePct, '%', true, true) +
+                compareRow('Impactos a la cabeza', a.headshotPct, g.headshotPct, '%', true, true) +
+                compareRow('Ping promedio', a.pingAvg, g.pingAvg, ' ms', false) +
                 compareRow('Snaps por demo', a.snapsPerDemo, g.snapsPerDemo, '', true) +
                 compareRow('Silent aim por demo', a.silentPerDemo, g.silentPerDemo, '', true) +
                 compareRow('Wallhack por demo', a.wallPerDemo, g.wallPerDemo, '', true) +
                 compareRow('Incidentes por demo', a.incidentsPerDemo, g.incidentsPerDemo, '', true) +
             '</tbody></table></div></section>' +
             '<section class="panel"><div class="panel-head"><div class="panel-title">Demos <span class="count">' + d.demos + '</span></div><span class="muted">Click para abrir la demo</span></div>' +
-            '<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Demo</th><th>Mapa</th><th class="r">Perfs</th><th class="r">Reacción</th><th class="r">Snaps</th><th class="r">Wallhack</th><th class="r">Resultado</th></tr></thead><tbody>' +
+            '<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Demo</th><th>Mapa</th><th class="r">Perfs</th><th class="r">Reacción</th><th class="r">Cabeza</th><th class="r">Snaps</th><th class="r">Wallhack</th><th class="r">Resultado</th></tr></thead><tbody>' +
             d.appearances.map(ap =>
                 '<tr class="click' + (ap.flags && ap.flags.length ? ' mark-red' : '') + '" onclick="openDemoFromPlayer(\'' + ap.entryId + '\')">' +
                     '<td class="num">' + fmtDate(ap.analyzedAt) + '</td>' +
@@ -152,6 +154,7 @@ function openPlayerPage(steamId) {
                     '<td class="muted">' + esc(ap.mapName) + '</td>' +
                     '<td class="r">' + (ap.totalJumps >= 5 ? ap.perfRatio.toFixed(1) + '%' : '<span class="muted">–</span>') + '</td>' +
                     '<td class="r">' + fmtNum(ap.reactionMs, ' ms') + '</td>' +
+                    '<td class="r">' + fmtNum(ap.headshotPct, '%') + '</td>' +
                     '<td class="r">' + ap.snaps + '</td>' +
                     '<td class="r">' + ap.wallhack + '</td>' +
                     '<td class="r">' + (ap.flags && ap.flags.length ? '<span class="tags">' + ap.flags.map(flagTag).join('') + '</span>' : '<span class="muted">Limpio</span>') + '</td>' +

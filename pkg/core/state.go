@@ -46,6 +46,7 @@ type TriggerData struct {
 	CrosshairOnEnemyTick *int
 	ReactionDeltas       []float64
 	Incidents            []TimelineIncident
+	LagDiscarded         int // reactions ignored because they happened during a ping spike
 }
 
 type AimData struct {
@@ -100,6 +101,7 @@ type PeekData struct {
 	Prefires     int
 	ReactionsMs  []float64
 	Incidents    []TimelineIncident
+	LagDiscarded int // reactions ignored because they happened during a ping spike
 }
 
 type PlayerState struct {
@@ -128,6 +130,8 @@ type PlayerState struct {
 	Grief      GriefData
 	Wallhack   WallhackData
 	Peek       PeekData
+	Hits       HitProfile
+	Ping       PingData
 }
 
 func NewPlayerState(name string, steamID uint64) *PlayerState {
@@ -171,7 +175,11 @@ type PlayerStats struct {
 	PeekEngagements     int                `json:"peekEngagements"`
 	Prefires            int                `json:"prefires"`
 	PrefireRatio        float64            `json:"prefireRatio"`
-	PeekReactionMs      *int               `json:"peekReactionMs"` // median, from becoming visible to first damage
+	PeekReactionMs      *int               `json:"peekReactionMs"`         // median, from becoming visible to first damage
+	LagDiscarded        int                `json:"lagDiscarded,omitempty"` // reactions ignored: measured during a ping spike
+	PingAvg             int                `json:"pingAvg,omitempty"`
+	PingMax             int                `json:"pingMax,omitempty"`
+	Hits                *HitProfile        `json:"hits,omitempty"`
 	PreviousInfractions int                `json:"previousInfractions"`
 	PreviousNames       []string           `json:"previousNames"`
 	ChatMessages        []ChatMessageEntry `json:"chatMessages"`
@@ -361,6 +369,10 @@ func (ps *PlayerState) ComputeStats(tickrate int) PlayerStats {
 		Prefires:        ps.Peek.Prefires,
 		PrefireRatio:    math.Round(prefireRatio*10) / 10,
 		PeekReactionMs:  peekMedian,
+		LagDiscarded:    ps.Peek.LagDiscarded + ps.Trigger.LagDiscarded,
+		PingAvg:         ps.Ping.Average(),
+		PingMax:         ps.Ping.Max,
+		Hits:            hitsOrNil(&ps.Hits),
 		IsAfk:           isAfk,
 		Flags:           flags,
 		Verdict:         verdict,
@@ -416,4 +428,13 @@ func maxSnapBurst(snaps []TimelineIncident, tickrate int) int {
 		}
 	}
 	return best
+}
+
+// hitsOrNil keeps reports of players who never fired free of an empty hit profile.
+func hitsOrNil(h *HitProfile) *HitProfile {
+	if h.Empty() {
+		return nil
+	}
+	c := *h
+	return &c
 }

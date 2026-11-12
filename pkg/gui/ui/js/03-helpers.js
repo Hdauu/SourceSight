@@ -37,3 +37,19 @@ function typeTag(type) {
     const cls = RED_TYPES.test(type) ? 'tag-red' : 'tag-yellow';
     return '<span class="tag ' + cls + '">' + esc(type) + '</span>';
 }
+
+// ── Hits per body zone (pkg/core/hits.go) ──
+// Fewer hits than this say nothing about where someone aims (same as the Go side).
+const MIN_HITS_FOR_PCT = 10;
+
+function hitTotals(h) {
+    if (!h || !h.zones) return null;
+    const z = h.zones;
+    const total = Object.keys(z).reduce((s, k) => s + z[k].hits, 0);
+    return {
+        total: total,
+        head: z.head.hits + z.neck.hits,
+        headPct: total >= MIN_HITS_FOR_PCT ? Math.round(1000 * (z.head.hits + z.neck.hits) / total) / 10 : null,
+        accuracy: h.shots > 0 ? Math.round(1000 * total / h.shots) / 10 : null
+    };
+}

@@ -25,19 +25,21 @@ type PlayerRow struct {
 
 // Appearance is a player's line in one demo.
 type Appearance struct {
-	EntryID    string   `json:"entryId"`
-	Level      string   `json:"level"`
-	DemoName   string   `json:"demoName"`
-	MapName    string   `json:"mapName"`
-	AnalyzedAt string   `json:"analyzedAt"`
-	Name       string   `json:"name"`
-	Flags      []string `json:"flags,omitempty"`
-	PerfRatio  float64  `json:"perfRatio"`
-	TotalJumps int      `json:"totalJumps"`
-	ReactionMs *int     `json:"reactionMs,omitempty"`
-	Snaps      int      `json:"snaps"`
-	Wallhack   int      `json:"wallhack"`
-	Incidents  int      `json:"incidents"`
+	EntryID     string   `json:"entryId"`
+	Level       string   `json:"level"`
+	DemoName    string   `json:"demoName"`
+	MapName     string   `json:"mapName"`
+	AnalyzedAt  string   `json:"analyzedAt"`
+	Name        string   `json:"name"`
+	Flags       []string `json:"flags,omitempty"`
+	PerfRatio   float64  `json:"perfRatio"`
+	TotalJumps  int      `json:"totalJumps"`
+	ReactionMs  *int     `json:"reactionMs,omitempty"`
+	Snaps       int      `json:"snaps"`
+	Wallhack    int      `json:"wallhack"`
+	Incidents   int      `json:"incidents"`
+	HeadshotPct *float64 `json:"headshotPct,omitempty"`
+	PingAvg     int      `json:"pingAvg,omitempty"`
 }
 
 // Averages summarizes a group of player-demos. Pointers are nil when there is no data.
@@ -51,6 +53,11 @@ type Averages struct {
 	// PrefirePct: share of engagements damaged within 100 ms of the enemy becoming visible
 	PrefirePct  *float64 `json:"prefirePct,omitempty"`
 	Engagements int      `json:"engagements"`
+	// Hits: bullets per body zone and weapon class, summed over every demo
+	Hits *core.HitProfile `json:"hits,omitempty"`
+	// HeadshotPct: share of enemy hits that landed on the head (or neck)
+	HeadshotPct *float64 `json:"headshotPct,omitempty"`
+	PingAvg     *float64 `json:"pingAvg,omitempty"`
 }
 
 // PlayerDetail aggregates one player across every stored demo.
@@ -100,6 +107,8 @@ type accum struct {
 	reactSamples                   int
 	snaps, silent, wall, incidents int
 	engagements, prefires          int
+	hits                           core.HitProfile
+	pingSum, pingN                 int
 }
 
 func (a *accum) add(s PlayerSummary) {
@@ -118,6 +127,11 @@ func (a *accum) add(s PlayerSummary) {
 	a.incidents += s.Incidents
 	a.engagements += s.PeekEngagements
 	a.prefires += s.Prefires
+	a.hits.Merge(s.Hits)
+	if s.PingAvg > 0 {
+		a.pingSum += s.PingAvg
+		a.pingN++
+	}
 }
 
 func (a *accum) averages() Averages {
@@ -135,6 +149,15 @@ func (a *accum) averages() Averages {
 		v := round1(100 * float64(a.prefires) / float64(a.engagements))
 		out.PrefirePct = &v
 	}
+	if !a.hits.Empty() {
+		h := a.hits
+		out.Hits = &h
+		out.HeadshotPct = headshotPct(&h)
+	}
+	if a.pingN > 0 {
+		v := math.Round(float64(a.pingSum) / float64(a.pingN))
+		out.PingAvg = &v
+	}
 	if a.demos > 0 {
 		d := float64(a.demos)
 		out.SnapsPerDemo = round1(float64(a.snaps) / d)
@@ -146,6 +169,22 @@ func (a *accum) averages() Averages {
 }
 
 func round1(v float64) float64 { return math.Round(v*10) / 10 }
+
+// minHitsForPct: fewer hits than this say nothing about where someone aims.
+const minHitsForPct = 10
+
+// headshotPct is the share of enemy hits on the head or neck, nil with too few hits.
+func headshotPct(h *core.HitProfile) *float64 {
+	if h == nil {
+		return nil
+	}
+	total := h.Zones.Total().Hits
+	if total < minHitsForPct {
+		return nil
+	}
+	v := round1(100 * float64(h.Zones.Head.Hits+h.Zones.Neck.Hits) / float64(total))
+	return &v
+}
 
 // GetOverview averages every player-demo in the history.
 func GetOverview() Overview {
@@ -283,19 +322,21 @@ func GetPlayer(steamID string) *PlayerDetail {
 			d.Totals.Smoke += s.SmokeKills
 			d.Totals.Incidents += s.Incidents
 			d.Appearances = append(d.Appearances, Appearance{
-				EntryID:    e.ID,
-				Level:      s.Level,
-				DemoName:   e.DemoName,
-				MapName:    e.MapName,
-				AnalyzedAt: e.AnalyzedAt,
-				Name:       s.Name,
-				Flags:      s.Flags,
-				PerfRatio:  s.PerfRatio,
-				TotalJumps: s.TotalJumps,
-				ReactionMs: s.TriggerAvgMs,
-				Snaps:      s.SnapCount,
-				Wallhack:   s.WallTrackCount,
-				Incidents:  s.Incidents,
+				EntryID:     e.ID,
+				Level:       s.Level,
+				DemoName:    e.DemoName,
+				MapName:     e.MapName,
+				AnalyzedAt:  e.AnalyzedAt,
+				Name:        s.Name,
+				Flags:       s.Flags,
+				PerfRatio:   s.PerfRatio,
+				TotalJumps:  s.TotalJumps,
+				ReactionMs:  s.TriggerAvgMs,
+				Snaps:       s.SnapCount,
+				Wallhack:    s.WallTrackCount,
+				Incidents:   s.Incidents,
+				HeadshotPct: headshotPct(s.Hits),
+				PingAvg:     s.PingAvg,
 			})
 		}
 	}

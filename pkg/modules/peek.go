@@ -35,6 +35,11 @@ func RegisterPeekDamage(st *core.PlayerState, enemyID uint64, enemyName string, 
 		return
 	}
 	pk.Damaged[enemyID] = true
+	// A ping spike bunches commands together: the reaction would look faster than it was
+	if st.Ping.Spiking() {
+		pk.LagDiscarded++
+		return
+	}
 	ms := float64(tick-since) * 1000 / float64(tickrate)
 	if ms > core.PrefireMaxSightMs {
 		return

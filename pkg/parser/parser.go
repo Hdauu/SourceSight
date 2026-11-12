@@ -151,6 +151,9 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		if e.Shooter != nil && e.Shooter.Name != "" {
 			roundBullets[e.Shooter.Name]++
 			if ast := getState(e.Shooter); ast != nil {
+				if class := bulletClass(e.Weapon); class != "" {
+					ast.Hits.AddShot(class)
+				}
 				pos := e.Shooter.Position()
 				eyeOffset := 64.0
 				if e.Shooter.IsDucking() {
@@ -171,6 +174,11 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		ast := getState(e.Attacker)
 		if ast == nil {
 			return
+		}
+
+		// Hits per body zone: bullets that damaged an enemy
+		if class := bulletClass(e.Weapon); class != "" && e.Attacker.Team != e.Player.Team {
+			ast.Hits.AddHit(class, int(e.HitGroup), e.HealthDamageTaken)
 		}
 
 		// Only inspect bullet weapons for Silent Aim and bullet-wall penetration anomalies
@@ -223,6 +231,9 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 
 			// Check kill anomalies (flash/smoke) strictly on actual KILL events
 			kast := getState(e.Killer)
+			if kast != nil && e.Killer.Team != e.Victim.Team && bulletClass(e.Weapon) != "" {
+				kast.Hits.AddKill(e.IsHeadshot)
+			}
 			if kast != nil && e.Weapon != nil {
 				class := e.Weapon.Class()
 				if class == common.EqClassRifle || class == common.EqClassPistols || class == common.EqClassSMG || class == common.EqClassHeavy {
@@ -303,6 +314,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 	})
 
 	lastProgress := time.Now()
+	lastPingTick := 0
 
 	// Frame Hook: optimized per-tick engine processing
 	p.RegisterEventHandler(func(e events.FrameDone) {
@@ -320,6 +332,16 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 
 		gs := p.GameState()
 		tick := gs.IngameTick()
+
+		// Scoreboard ping, once per second (the server doesn't update it faster)
+		if tick-lastPingTick >= tickrate {
+			lastPingTick = tick
+			for _, pl := range gs.Participants().Playing() {
+				if st := getState(pl); st != nil {
+					st.Ping.Sample(pl.Ping())
+				}
+			}
+		}
 
 		type cachedPlayer struct {
 			pl          *common.Player
@@ -637,4 +659,29 @@ func spottedMask(pl *common.Player) (mask uint64, ok bool) {
 		mask |= uint64(uint32(hi.Value().IntVal)) << 32
 	}
 	return mask, true
+}
+
+// bulletClass names the weapon class for hit statistics, or "" for anything that
+// isn't a firearm (knife, grenades, fire, zeus, C4).
+func bulletClass(w *common.Equipment) string {
+	if w == nil {
+		return ""
+	}
+	switch w.Type {
+	case common.EqAWP, common.EqScout, common.EqG3SG1, common.EqScar20:
+		return core.WeaponSniper
+	case common.EqZeus:
+		return ""
+	}
+	switch w.Class() {
+	case common.EqClassRifle:
+		return core.WeaponRifle
+	case common.EqClassPistols:
+		return core.WeaponPistol
+	case common.EqClassSMG:
+		return core.WeaponSMG
+	case common.EqClassHeavy:
+		return core.WeaponHeavy
+	}
+	return ""
 }

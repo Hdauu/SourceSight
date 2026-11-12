@@ -28,3 +28,26 @@ func TestPeekReaction(t *testing.T) {
 		t.Fatalf("want 2 engagements, 1 prefire; got %+v", st.Peek)
 	}
 }
+
+// A reaction measured during a ping spike is discarded, not counted as a prefire.
+func TestPeekIgnoresPingSpike(t *testing.T) {
+	st := core.NewPlayerState("p", 1)
+	for range 5 {
+		st.Ping.Sample(20)
+	}
+	st.Ping.Sample(200)
+	UpdatePeekVisibility(st, 2, false, 100)
+	UpdatePeekVisibility(st, 2, true, 101)
+	RegisterPeekDamage(st, 2, "enemy", 102, 64) // 15 ms: would be a prefire
+	if st.Peek.Engagements != 0 || st.Peek.Prefires != 0 || st.Peek.LagDiscarded != 1 {
+		t.Fatalf("engagements=%d prefires=%d discarded=%d", st.Peek.Engagements, st.Peek.Prefires, st.Peek.LagDiscarded)
+	}
+
+	st.Ping.Sample(20) // spike over: measured again
+	UpdatePeekVisibility(st, 2, false, 200)
+	UpdatePeekVisibility(st, 2, true, 201)
+	RegisterPeekDamage(st, 2, "enemy", 202, 64)
+	if st.Peek.Prefires != 1 {
+		t.Fatalf("prefires=%d after the spike", st.Peek.Prefires)
+	}
+}

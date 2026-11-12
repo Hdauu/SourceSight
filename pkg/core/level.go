@@ -79,4 +79,5 @@ func KnownFlags() []string {
 //	1: up to v2.2.0
 //	2: prefire detection (v2.3.0)
 //	3: stricter cheat level for bhop streaks and few aim snaps (v2.3.0)
-const AnalysisVersion = 3
+//	4: hits per body zone and weapon class, ping, reactions during ping spikes ignored
+const AnalysisVersion = 4
