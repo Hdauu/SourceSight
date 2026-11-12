@@ -103,6 +103,38 @@
                     <div class="progress"><div class="progress-bar" id="loadingBar"></div></div>
                 </div>
 
+                <!-- Several demos analyzed at once (see js/15-batch.js) -->
+                <div id="batchView" style="display:none; flex-direction:column; gap:16px;">
+                    <div class="page-head">
+                        <div>
+                            <div class="page-title" id="batchTitle"></div>
+                            <div class="page-sub" id="batchSub"></div>
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn btn-danger" id="batchCancel" onclick="cancelBatch()">Cancelar</button>
+                            <button class="btn" id="batchClose" style="display:none;" onclick="closeBatch()">Cerrar</button>
+                        </div>
+                    </div>
+                    <div class="progress progress-wide"><div class="progress-bar" id="batchBar"></div></div>
+                    <div class="batch-counts" id="batchCounts"></div>
+                    <section class="panel">
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Demo</th>
+                                        <th>Estado</th>
+                                        <th style="width:180px;">Progreso</th>
+                                        <th>Resultado</th>
+                                        <th class="r">Tiempo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="batchBody"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
                 <div id="overviewView" style="display:none; flex-direction:column; gap:16px;"></div>
                 <div id="playerView" style="display:none; flex-direction:column; gap:16px;"></div>
 

@@ -5,7 +5,7 @@ function setProgress(pct, label) {
 }
 
 // Only one main view is visible at a time
-const VIEWS = { drop: 'dropzone', loading: 'loadingState', audit: 'auditContent', overview: 'overviewView', player: 'playerView' };
+const VIEWS = { drop: 'dropzone', loading: 'loadingState', batch: 'batchView', audit: 'auditContent', overview: 'overviewView', player: 'playerView' };
 function showView(name) {
     Object.keys(VIEWS).forEach(k => {
         document.getElementById(VIEWS[k]).style.display = k === name ? 'flex' : 'none';

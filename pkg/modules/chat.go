@@ -32,10 +32,18 @@ type ChatTracker struct {
 	RepeatCount int
 }
 
-var playerTrackers = make(map[uint64]*ChatTracker)
+// ChatInspector keeps the per-player spam state of one demo. Each analysis creates
+// its own, so demos analyzed in parallel never share it.
+type ChatInspector struct {
+	trackers map[uint64]*ChatTracker
+}
 
-// InspectChatMessage analyzes a chat message for toxicity, spam binds, and all-chat ghosting.
-func InspectChatMessage(
+func NewChatInspector() *ChatInspector {
+	return &ChatInspector{trackers: map[uint64]*ChatTracker{}}
+}
+
+// Inspect analyzes a chat message for toxicity, spam binds, and all-chat ghosting.
+func (ci *ChatInspector) Inspect(
 	senderName string,
 	senderSteamID uint64,
 	tick, round int,
@@ -74,10 +82,10 @@ func InspectChatMessage(
 	}
 
 	// 3. Check spam bind (repeated text within 64 ticks)
-	tr, ok := playerTrackers[senderSteamID]
+	tr, ok := ci.trackers[senderSteamID]
 	if !ok {
 		tr = &ChatTracker{}
-		playerTrackers[senderSteamID] = tr
+		ci.trackers[senderSteamID] = tr
 	}
 
 	if tr.LastMsgText == trimmed && (tick-tr.LastMsgTick) <= 64 {
@@ -108,9 +116,4 @@ func InspectChatMessage(
 		Category:      category,
 		GotoCmd:       fmt.Sprintf("demo_gototick %d", preroll),
 	}
-}
-
-// ResetChatTrackers clears spam-bind state so consecutive demos don't bleed into each other.
-func ResetChatTrackers() {
-	playerTrackers = make(map[uint64]*ChatTracker)
 }

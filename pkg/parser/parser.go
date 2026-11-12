@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -19,11 +20,16 @@ import (
 	"sourcesight/pkg/modules"
 )
 
+// ErrCanceled is returned when ParserOptions.Cancel was closed mid-analysis.
+var ErrCanceled = errors.New("análisis cancelado")
+
 type ParserOptions struct {
 	Verbose  bool
 	DemoPath string
 	// OnProgress, if set, receives the parsed fraction (0..1) a few times per second.
 	OnProgress func(fraction float64)
+	// Cancel, if set, aborts the analysis as soon as it is closed.
+	Cancel <-chan struct{}
 }
 
 func ParseDemo(demoPath string, opts ParserOptions) (*core.DemoReport, error) {
@@ -75,7 +81,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		return st
 	}
 
-	modules.ResetChatTrackers()
+	chat := modules.NewChatInspector()
 
 	var chatLog []core.ChatMessageEntry
 	var adminLog []core.AdminEvent
@@ -267,7 +273,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		if e.Sender == nil {
 			return
 		}
-		chatMsg := modules.InspectChatMessage(
+		chatMsg := chat.Inspect(
 			e.Sender.Name, e.Sender.SteamID64,
 			p.GameState().IngameTick(), currentRound,
 			e.Text, !e.IsChatAll, e.Sender.IsAlive(),
@@ -300,9 +306,16 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 
 	// Frame Hook: optimized per-tick engine processing
 	p.RegisterEventHandler(func(e events.FrameDone) {
-		if opts.OnProgress != nil && time.Since(lastProgress) > 150*time.Millisecond {
+		if time.Since(lastProgress) > 150*time.Millisecond {
 			lastProgress = time.Now()
-			opts.OnProgress(float64(p.Progress()))
+			if opts.OnProgress != nil {
+				opts.OnProgress(float64(p.Progress()))
+			}
+			select {
+			case <-opts.Cancel:
+				p.Cancel()
+			default:
+			}
 		}
 
 		gs := p.GameState()
@@ -480,6 +493,9 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 
 	// Parse stream
 	parseErr := p.ParseToEnd()
+	if errors.Is(parseErr, demoinfocs.ErrCancelled) {
+		return nil, ErrCanceled
+	}
 	if parseErr != nil && parseErr != demoinfocs.ErrUnexpectedEndOfDemo {
 		// Log but continue to finalize collected data
 		if opts.Verbose {
@@ -501,12 +517,21 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		playerStats = append(playerStats, s)
 	}
 
-	// Sort: cheaters / suspicious first, then by perf ratio descending
+	// Sort: cheaters / suspicious first, then by perf ratio descending. Name and
+	// SteamID break ties so the same demo always yields the same order (players come
+	// from a map, whose iteration order is random).
 	sort.Slice(playerStats, func(i, j int) bool {
-		if len(playerStats[i].Flags) != len(playerStats[j].Flags) {
-			return len(playerStats[i].Flags) > len(playerStats[j].Flags)
+		a, b := playerStats[i], playerStats[j]
+		if len(a.Flags) != len(b.Flags) {
+			return len(a.Flags) > len(b.Flags)
 		}
-		return playerStats[i].PerfRatio > playerStats[j].PerfRatio
+		if a.PerfRatio != b.PerfRatio {
+			return a.PerfRatio > b.PerfRatio
+		}
+		if a.Name != b.Name {
+			return a.Name < b.Name
+		}
+		return a.SteamID < b.SteamID
 	})
 
 	// Consolidate and sort full Overwatch timeline

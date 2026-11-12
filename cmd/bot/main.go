@@ -29,12 +29,17 @@ type BotConfig struct {
 	Prefix     string   `json:"prefix"`
 	ChannelIDs []string `json:"channelIds"`
 	MaxDemoMB  int64    `json:"maxDemoMB"`
+	// MaxParallel is how many demos are analyzed at once (default 2).
+	MaxParallel int `json:"maxParallel,omitempty"`
 }
 
-// analysisMu serializes demo analyses; queued counts demos waiting or running.
+// slots limits how many demos are analyzed at once; queued counts demos waiting or
+// running; storeMu makes the duplicate check + history save + database record
+// atomic, so two copies of one match analyzed together can't both be counted.
 var (
-	analysisMu sync.Mutex
-	queued     atomic.Int32
+	slots   chan struct{}
+	queued  atomic.Int32
+	storeMu sync.Mutex
 )
 
 func loadConfig(path string) (*BotConfig, error) {
@@ -73,6 +78,12 @@ func main() {
 		fmt.Println("═══════════════════════════════════════════════════")
 		return
 	}
+
+	parallel := cfg.MaxParallel
+	if parallel <= 0 {
+		parallel = 2
+	}
+	slots = make(chan struct{}, parallel)
 
 	dg, err := discordgo.New("Bot " + cfg.Token)
 	if err != nil {
@@ -140,9 +151,8 @@ func main() {
 			return
 		}
 
-		// One analysis at a time: parsing is CPU-heavy and the analyzer keeps
-		// per-run state that must not be shared between concurrent demos.
-		ahead := queued.Add(1) - 1
+		// Up to cap(slots) analyses run at once; the rest wait their turn
+		ahead := int(queued.Add(1)) - cap(slots)
 		defer queued.Add(-1)
 		status := fmt.Sprintf("Analizando `%s` (%.1f MB)...", demAtt.Filename, sizeMB)
 		if ahead > 0 {
@@ -153,8 +163,8 @@ func main() {
 			fmt.Printf("[-] No se pudo responder en el canal: %v\n", err)
 			return
 		}
-		analysisMu.Lock()
-		defer analysisMu.Unlock()
+		slots <- struct{}{}
+		defer func() { <-slots }()
 		if ahead > 0 {
 			_, _ = s.ChannelMessageEdit(m.ChannelID, statusMsg.ID, fmt.Sprintf("Analizando `%s` (%.1f MB)...", demAtt.Filename, sizeMB))
 		}
@@ -191,6 +201,7 @@ func main() {
 
 		// Same match analyzed before (here or in the app): show it, don't count it twice
 		dupNote := ""
+		storeMu.Lock()
 		if similar := history.FindSimilar(rep, ""); len(similar) > 0 {
 			dupNote = fmt.Sprintf("Esta partida ya se analizó el %s (`%s`): no se suma de nuevo a los promedios ni a reincidencias.",
 				shortDate(similar[0].AnalyzedAt), similar[0].DemoName)
@@ -201,6 +212,7 @@ func main() {
 			}
 			db.GetDatabase().RecordReport(rep)
 		}
+		storeMu.Unlock()
 
 		// Render PNG
 		tempPng := filepath.Join(tempDir, fmt.Sprintf("report_%d.png", time.Now().UnixNano()))

@@ -15,10 +15,7 @@ type AppConfig struct {
 	SidebarWidth   int     `json:"sidebarWidth,omitempty"` // px; 0 = default
 }
 
-var (
-	cfgLock sync.Mutex
-	cfgFile = appdata.Path("sourcesight_config.json")
-)
+var cfgLock sync.Mutex
 
 func DefaultConfig() AppConfig {
 	return AppConfig{
@@ -31,7 +28,7 @@ func LoadConfig() AppConfig {
 	cfgLock.Lock()
 	defer cfgLock.Unlock()
 
-	data, err := os.ReadFile(cfgFile)
+	data, err := os.ReadFile(cfgFile())
 	if err != nil {
 		return DefaultConfig()
 	}
@@ -54,7 +51,7 @@ func SaveConfig(cfg AppConfig) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(cfgFile, data, 0644)
+	return os.WriteFile(cfgFile(), data, 0644)
 }
 
 // CleanCSGODir returns the path ending in the 'csgo' folder where demos live.
@@ -81,3 +78,7 @@ func stringsHasSuffixFold(s, suffix string) bool {
 	return filepath.Clean(end) == filepath.Clean(suffix) ||
 		filepath.Base(s) == suffix
 }
+
+// cfgFile is resolved on use, not at program start, so the data directory can still
+// be chosen (SOURCESIGHT_DATA_DIR) before anything touches it.
+func cfgFile() string { return appdata.Path("sourcesight_config.json") }

@@ -2,8 +2,8 @@ package modules
 
 import (
 	"fmt"
-	"strings"
 	"sourcesight/pkg/core"
+	"strings"
 )
 
 var semiAutoWeapons = []string{

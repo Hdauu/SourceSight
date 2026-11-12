@@ -13,12 +13,12 @@ import (
 )
 
 var (
-	colorBg      = color.RGBA{14, 14, 14, 255}   // #0e0e0e
-	colorHeader  = color.RGBA{10, 10, 10, 255}   // #0a0a0a
-	colorRow1    = color.RGBA{26, 26, 26, 255}   // #1a1a1a
-	colorRow2    = color.RGBA{17, 17, 17, 255}   // #111111
-	colorSecBar  = color.RGBA{22, 22, 22, 255}   // #161616
-	colorBorder  = color.RGBA{38, 38, 38, 255}   // #262626
+	colorBg      = color.RGBA{14, 14, 14, 255}    // #0e0e0e
+	colorHeader  = color.RGBA{10, 10, 10, 255}    // #0a0a0a
+	colorRow1    = color.RGBA{26, 26, 26, 255}    // #1a1a1a
+	colorRow2    = color.RGBA{17, 17, 17, 255}    // #111111
+	colorSecBar  = color.RGBA{22, 22, 22, 255}    // #161616
+	colorBorder  = color.RGBA{38, 38, 38, 255}    // #262626
 	colorText    = color.RGBA{243, 244, 246, 255} // #f3f4f6
 	colorDim     = color.RGBA{156, 163, 175, 255} // #9ca3af
 	colorMid     = color.RGBA{209, 213, 219, 255} // #d1d5db

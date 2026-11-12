@@ -2,7 +2,6 @@ package gui
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -22,7 +21,6 @@ import (
 	"sourcesight/pkg/evidence"
 	"sourcesight/pkg/history"
 	"sourcesight/pkg/launcher"
-	"sourcesight/pkg/parser"
 	"sourcesight/pkg/report"
 	"sourcesight/pkg/steamid"
 	"sourcesight/pkg/update"
@@ -34,12 +32,19 @@ var (
 	currentReport   *core.DemoReport
 	currentDemoPath string
 	pendingUpdate   *update.Release
-	busy            atomic.Bool
 )
 
 // app wraps the webview so Go can call page functions with JSON-encoded arguments.
+// pageHost is what the app needs from the window: run code in the page on the UI
+// thread. webview2.WebView satisfies it; tests use a fake that records the calls.
+type pageHost interface {
+	Dispatch(f func())
+	Eval(js string)
+}
+
 type app struct {
-	w webview2.WebView
+	w    webview2.WebView // nil in tests
+	host pageHost
 }
 
 // call runs fn(args...) in the page on the UI thread. Every argument is JSON-encoded,
@@ -54,7 +59,7 @@ func (a *app) call(fn string, args ...any) {
 		parts[i] = string(b)
 	}
 	script := fn + "(" + strings.Join(parts, ",") + ");"
-	a.w.Dispatch(func() { a.w.Eval(script) })
+	a.host.Dispatch(func() { a.host.Eval(script) })
 }
 
 func (a *app) toast(msg string) { a.call("showToast", msg) }
@@ -159,9 +164,6 @@ type reportMeta struct {
 	QueueTotal int    `json:"queueTotal"`
 }
 
-// errSkipped marks a demo the user chose not to keep (duplicate dialog).
-var errSkipped = errors.New("omitida")
-
 type promptOption struct {
 	ID      string `json:"id"`
 	Label   string `json:"label"`
@@ -186,191 +188,6 @@ func (a *app) ask(title, text string, options []promptOption) string {
 	case <-time.After(30 * time.Minute):
 		return ""
 	}
-}
-
-func shortDate(ts string) string {
-	if len(ts) < 10 {
-		return ts
-	}
-	return ts[8:10] + "/" + ts[5:7] + "/" + ts[0:4]
-}
-
-// analyze returns the report for one demo. Unless force is set it reuses the cached
-// report of the same file, and asks before storing a duplicate of a stored match.
-func (a *app) analyze(path string, force bool, label string) (*core.DemoReport, *history.Entry, bool, error) {
-	if !force {
-		if rep, entry := history.Lookup(path); rep != nil {
-			return rep, entry, true, nil
-		}
-	}
-	name := filepath.Base(path)
-	ownID, _ := history.ID(path)
-
-	// Byte-identical copy stored under another name or folder
-	a.call("setProgress", 0, label+" — verificando")
-	sha, _ := history.FileSHA256(path)
-	if !force {
-		if dup := history.FindByFileHash(sha); dup != nil && dup.ID != ownID {
-			choice := a.ask("Demo repetida",
-				fmt.Sprintf("«%s» es el mismo archivo que «%s», que analizaste el %s.", name, dup.DemoName, shortDate(dup.AnalyzedAt)),
-				[]promptOption{{"open", "Abrir la guardada", true}, {"analyze", "Analizar igual", false}, {"skip", "Saltear", false}})
-			switch choice {
-			case "open":
-				rep, entry, err := history.Open(dup.ID)
-				return rep, entry, true, err
-			case "analyze":
-			default:
-				return nil, nil, false, errSkipped
-			}
-		}
-	}
-
-	rep, err := parser.ParseDemo(path, parser.ParserOptions{
-		OnProgress: func(fraction float64) {
-			pct := int(fraction * 100)
-			if pct > 99 {
-				pct = 99
-			}
-			a.call("setProgress", pct, fmt.Sprintf("%s — %d%%", label, pct))
-		},
-	})
-	if err != nil {
-		return nil, nil, false, err
-	}
-
-	pdb := db.GetDatabase()
-	if force {
-		// Re-analysis: forget what this file counted before, then record the new result
-		if _, old := history.Lookup(path); old != nil {
-			pdb.RemoveMatch(old.MatchID)
-		}
-		pdb.ForgetLegacyDemo(filepath.Base(path))
-	}
-
-	// Same match by content: a renamed copy, a second recording or a trimmed file
-	// (skipped on re-analysis: the user already decided about duplicates when adding the demo)
-	if similar := history.FindSimilar(rep, ownID); !force && len(similar) > 0 {
-		old := similar[0]
-		choice := a.ask("Partida repetida",
-			fmt.Sprintf("«%s» parece la misma partida que «%s» (%s, %d rondas, mismos jugadores), analizada el %s. Si guardás las dos, la partida cuenta doble en los promedios del historial.",
-				name, old.DemoName, old.MapName, old.Rounds, shortDate(old.AnalyzedAt)),
-			[]promptOption{{"replace", "Reemplazar la anterior", true}, {"keep", "Guardar las dos", false}, {"discard", "Descartar esta", false}})
-		switch choice {
-		case "replace":
-			for _, s := range similar {
-				if mid, _ := history.Remove(s.ID); mid != "" && !history.MatchInUse(mid) {
-					pdb.RemoveMatch(mid)
-				}
-			}
-		case "keep":
-		default:
-			return nil, nil, false, errSkipped
-		}
-	}
-
-	entry, err := history.Save(path, rep, sha)
-	if err != nil {
-		a.toast("No se pudo guardar en el historial: " + err.Error())
-	}
-	pdb.RecordReport(rep)
-	return rep, entry, false, nil
-}
-
-// processQueue analyzes demos one after another and finally shows the most relevant
-// report: the first one with infractions, otherwise the last one.
-func (a *app) processQueue(paths []string, force bool) {
-	applog.Printf("cola: entrada %q", paths)
-	paths = expandDemoPaths(paths)
-	applog.Printf("cola: demos %q", paths)
-	if len(paths) == 0 {
-		a.call("restoreIdle")
-		a.toast("No se encontraron archivos .dem")
-		return
-	}
-	if !busy.CompareAndSwap(false, true) {
-		a.toast("Ya hay un análisis en curso")
-		return
-	}
-	defer busy.Store(false)
-
-	defer func() {
-		// A parser panic would otherwise kill the whole app without a word
-		if r := recover(); r != nil {
-			a.call("restoreIdle")
-			a.toast(fmt.Sprintf("Error interno analizando la demo: %v", r))
-		}
-	}()
-
-	a.call("showLoading")
-
-	var shown *core.DemoReport
-	var shownMeta reportMeta
-	var failures []string
-	skipped := 0
-	for i, path := range paths {
-		label := "Analizando " + filepath.Base(path)
-		if len(paths) > 1 {
-			label = fmt.Sprintf("Demo %d de %d · %s", i+1, len(paths), filepath.Base(path))
-		}
-		a.call("setProgress", 0, label)
-
-		rep, entry, cached, err := a.analyze(path, force, label)
-		if errors.Is(err, errSkipped) {
-			skipped++
-			continue
-		}
-		if err != nil {
-			failures = append(failures, filepath.Base(path)+": "+err.Error())
-			continue
-		}
-		meta := reportMeta{DemoPath: path, FromCache: cached, QueueIndex: i + 1, QueueTotal: len(paths)}
-		if entry != nil {
-			meta.HistoryID = entry.ID
-		}
-		a.call("refreshHistory")
-
-		hasFlags := false
-		for _, p := range rep.Players {
-			if len(p.Flags) > 0 {
-				hasFlags = true
-				break
-			}
-		}
-		if shown == nil || (hasFlags && !reportHasFlags(shown)) || (!reportHasFlags(shown) && !hasFlags) {
-			shown, shownMeta = rep, meta
-		}
-	}
-
-	if shown == nil {
-		a.call("restoreIdle")
-		if len(failures) > 0 {
-			a.toast("No se pudo analizar: " + strings.Join(failures, " · "))
-		} else if skipped > 0 {
-			a.toast("No se agregó ninguna demo: estaban repetidas")
-		}
-		return
-	}
-	a.show(shown, shownMeta)
-
-	switch {
-	case len(failures) > 0:
-		a.toast(fmt.Sprintf("%d demo(s) fallaron: %s", len(failures), strings.Join(failures, " · ")))
-	case len(paths) > 1 && skipped > 0:
-		a.toast(fmt.Sprintf("%d demos analizadas, %d salteadas por repetidas", len(paths)-skipped, skipped))
-	case len(paths) > 1:
-		a.toast(fmt.Sprintf("%d demos analizadas — están todas en el historial", len(paths)))
-	case shownMeta.FromCache:
-		a.toast("Abierta desde el historial (ya estaba analizada)")
-	}
-}
-
-func reportHasFlags(rep *core.DemoReport) bool {
-	for _, p := range rep.Players {
-		if len(p.Flags) > 0 {
-			return true
-		}
-	}
-	return false
 }
 
 func (a *app) show(rep *core.DemoReport, meta reportMeta) {
@@ -420,7 +237,7 @@ func LaunchApp(initialDemoPath string) error {
 	w.SetSize(1320, 860, webview2.HintNone)
 	setWindowIcon(uintptr(w.Window()))
 
-	a := &app{w: w}
+	a := &app{w: w, host: w}
 
 	// Real paths of files dropped onto the window (patched go-webview2, see third_party/)
 	edge.DebugLog = applog.Printf
@@ -475,6 +292,14 @@ func LaunchApp(initialDemoPath string) error {
 		}
 		if len(paths) > 0 {
 			go a.processQueue(paths, true)
+		}
+		return nil
+	})
+
+	_ = w.Bind("cancelAnalysis", func() error {
+		if b := currentBatch.Load(); b != nil {
+			b.stop()
+			applog.Printf("cola: cancelada por el usuario")
 		}
 		return nil
 	})

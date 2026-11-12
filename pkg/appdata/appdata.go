@@ -10,19 +10,27 @@ import (
 	"sync"
 )
 
+// DataDirEnv names the environment variable that overrides the data directory.
+const DataDirEnv = "SOURCESIGHT_DATA_DIR"
+
 var (
 	dirOnce sync.Once
 	dir     string
 )
 
 // Dir returns the data directory, creating it if needed.
+// SOURCESIGHT_DATA_DIR overrides the location (tests point it at a temporary folder).
 func Dir() string {
 	dirOnce.Do(func() {
-		base, err := os.UserConfigDir()
-		if err != nil {
-			base = exeDir()
+		if custom := os.Getenv(DataDirEnv); custom != "" {
+			dir = custom
+		} else {
+			base, err := os.UserConfigDir()
+			if err != nil {
+				base = exeDir()
+			}
+			dir = filepath.Join(base, "SourceSight")
 		}
-		dir = filepath.Join(base, "SourceSight")
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			dir = exeDir()
 		}
