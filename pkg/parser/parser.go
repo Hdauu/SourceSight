@@ -94,12 +94,13 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 	// Event Handlers
 	p.RegisterEventHandler(func(e events.RoundStart) {
 		currentRound++
+		clear(roundBullets) // "few bullets before the kill" (smoke kills) counts per round
 		// Keep deaths inside the revenge window: admins often slay right after the round flips
 		curTick := p.GameState().IngameTick()
 		roundStarts = append(roundStarts, curTick)
 		var kept []modules.DeathRecord
 		for _, d := range recentDeaths {
-			if curTick-d.Tick <= core.RevengeSlayWindowTicks {
+			if curTick-d.Tick <= core.RevengeSlayWindowTicks*tickrate/64 {
 				kept = append(kept, d)
 			}
 		}
@@ -296,7 +297,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		if cmd, target, ok := modules.ParseAdminChatCommand(e.Text); ok {
 			tick := p.GameState().IngameTick()
 			if !isDuplicateAdminEvent(adminLog, e.Sender.Name, cmd, tick) {
-				adminLog = append(adminLog, modules.BuildAdminEvent(e.Sender.Name, cmd, target, tick, currentRound, recentDeaths))
+				adminLog = append(adminLog, modules.BuildAdminEvent(e.Sender.Name, cmd, target, tick, currentRound, recentDeaths, tickrate))
 			}
 		}
 	})
@@ -309,7 +310,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		}
 		tick := p.GameState().IngameTick()
 		if !isDuplicateAdminEvent(adminLog, admin, cmd, tick) {
-			adminLog = append(adminLog, modules.BuildAdminEvent(admin, cmd, target, tick, currentRound, recentDeaths))
+			adminLog = append(adminLog, modules.BuildAdminEvent(admin, cmd, target, tick, currentRound, recentDeaths, tickrate))
 		}
 	})
 
@@ -500,7 +501,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 			modules.ProcessWallTrackTick(st, tick, eyePos, st.Pitch, st.Yaw, cp.speed, enemies, func(name string) bool {
 				enPl := playersByName[name]
 				return enPl == nil || isSpottedBy(enPl, tracker)
-			})
+			}, tickrate)
 
 			// Module G (ghosting) stays unwired: dead teammates calling out over voice is legal,
 			// so a prefire on the killer's spot is not proof — see modules.CheckGhosting.
@@ -510,7 +511,8 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 
 			// Module E: Macro
 			if attackRisingEdge && cp.pl.ActiveWeapon() != nil {
-				modules.ProcessMacroTick(st, tick, true, cp.pl.ActiveWeapon().String(), tickrate)
+				w := cp.pl.ActiveWeapon()
+				modules.ProcessMacroTick(st, tick, true, w.String(), semiAutoPistol(w), tickrate)
 			}
 		}
 	})
@@ -689,4 +691,16 @@ func bulletClass(w *common.Equipment) string {
 		return core.WeaponHeavy
 	}
 	return ""
+}
+
+// semiAutoPistol: pistols that fire one shot per click, where a macro shows up as
+// perfectly even clicks. Matched by type: display names ("Desert Eagle", "Tec-9")
+// don't match the internal ones. The CZ75 is automatic and the zeus fires once.
+func semiAutoPistol(w *common.Equipment) bool {
+	switch w.Type {
+	case common.EqGlock, common.EqP2000, common.EqUSP, common.EqP250, common.EqDeagle,
+		common.EqDualBerettas, common.EqFiveSeven, common.EqTec9, common.EqRevolver:
+		return true
+	}
+	return false
 }

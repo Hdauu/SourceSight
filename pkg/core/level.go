@@ -79,5 +79,7 @@ func KnownFlags() []string {
 //	1: up to v2.2.0
 //	2: prefire detection (v2.3.0)
 //	3: stricter cheat level for bhop streaks and few aim snaps (v2.3.0)
-//	4: hits per body zone and weapon class, ping, reactions during ping spikes ignored
+//	4: hits per body zone and weapon class, ping, reactions during ping spikes ignored;
+//	   macro measured per burst on every semi-auto pistol, smoke-kill bullets counted per
+//	   round, wallhack and revenge windows scaled to the demo tickrate
 const AnalysisVersion = 4

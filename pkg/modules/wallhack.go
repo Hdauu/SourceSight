@@ -17,6 +17,7 @@ func ProcessWallTrackTick(
 	trackerSpeed float64,
 	enemies []EnemyHitbox,
 	isVisible func(enemyName string) bool, // evaluated lazily: only for enemies inside the crosshair cone
+	tickrate int,
 ) {
 	if !st.IsAlive || len(enemies) == 0 {
 		st.Wallhack.TargetPlayer = ""
@@ -67,7 +68,7 @@ func ProcessWallTrackTick(
 		if st.Wallhack.TargetPlayer == closestEnemy {
 			st.Wallhack.LockTicks++
 			sweep := math.Abs(core.NormalizeAngle(float64(yaw) - st.Wallhack.LockStartYaw))
-			if !st.Wallhack.LockReported && st.Wallhack.LockTicks >= core.WallTrackMinTicks && sweep >= core.WallTrackMinSweepDeg {
+			if !st.Wallhack.LockReported && st.Wallhack.LockTicks >= core.WallTrackMinTicks*tickrate/64 && sweep >= core.WallTrackMinSweepDeg {
 				st.Wallhack.LockReported = true
 				st.Wallhack.IncidentCount++
 				st.Wallhack.Incidents = append(st.Wallhack.Incidents, core.TimelineIncident{

@@ -130,7 +130,7 @@ func ParseAdminActivity(text string) (admin, cmd, target string, ok bool) {
 // BuildAdminEvent correlates an admin command with the admin's recent deaths.
 // A punitive command against the player who killed the admin within
 // RevengeSlayWindowTicks is flagged as a revenge action.
-func BuildAdminEvent(adminName, cmd, target string, tick, round int, deaths []DeathRecord) core.AdminEvent {
+func BuildAdminEvent(adminName, cmd, target string, tick, round int, deaths []DeathRecord, tickrate int) core.AdminEvent {
 	ev := core.AdminEvent{
 		Tick:       tick,
 		Round:      round,
@@ -144,14 +144,14 @@ func BuildAdminEvent(adminName, cmd, target string, tick, round int, deaths []De
 		for i := len(deaths) - 1; i >= 0; i-- {
 			d := deaths[i]
 			elapsed := tick - d.Tick
-			if elapsed < 0 || elapsed > core.RevengeSlayWindowTicks {
+			if elapsed < 0 || elapsed > core.RevengeSlayWindowTicks*tickrate/64 {
 				continue
 			}
 			// SourceMod targets by case-insensitive partial name match
 			if d.VictimName == adminName && strings.Contains(strings.ToLower(d.KillerName), needle) {
 				ev.IsRevenge = true
 				ev.TargetName = d.KillerName
-				ev.Note = fmt.Sprintf("%s mató al admin %d ticks antes — posible abuso por venganza", d.KillerName, elapsed)
+				ev.Note = fmt.Sprintf("%s mató al admin %.1f s antes — posible abuso por venganza", d.KillerName, float64(elapsed)/float64(tickrate))
 				break
 			}
 		}

@@ -52,14 +52,14 @@ const (
 	WallTrackMinDist     = 150.0  // closer engagements are trivially trackable
 	WallTrackMaxDist     = 3000.0 // beyond this, crosshair overlap is noise
 	WallTrackMaxAngleDeg = 4.0    // crosshair cone around the hidden enemy's chest
-	WallTrackMinTicks    = 64     // ~1.0s sustained lock @ 64-tick
+	WallTrackMinTicks    = 64     // 1.0 s of sustained lock, in 64-tick ticks (scaled to the demo)
 	WallTrackMinSweepDeg = 20.0   // crosshair must actually follow the target, not hold an angle
 
 	// Staff Modules (G, H, I)
 	GhostWindowTicks       = 128   // 2.0s @ 64-tick
 	GhostMinDelayMs        = 500.0 // faster shots are kill-feed trades
 	GhostMinDistUnits      = 800.0 // nearer than this the shooter could hear the fight
-	RevengeSlayWindowTicks = 320   // 5.0s @ 64-tick
+	RevengeSlayWindowTicks = 320   // 5.0 s, in 64-tick ticks (scaled to the demo)
 	AfkDisplacementUnits   = 50.0
 	AfkRoundsThreshold     = 3
 	TeamflashThresholdSecs = 10.0
