@@ -28,57 +28,59 @@ const BODY_WEAPONS = [
     ['pistol', 'Pistolas'], ['smg', 'SMG'], ['shotgun', 'Escopetas'], ['heavy', 'Ametralladoras']
 ];
 
-// Shapes, drawn around x = 180 in a 360 × 430 box. Right-side limbs (viewer's left)
-// are drawn once; the left ones are the same path mirrored.
+// Shapes, drawn around x = 180 in a 360 × 450 box with real proportions (about eight
+// heads tall). Right-side limbs (viewer's left) are drawn once; the left ones are the
+// same path mirrored. Zones are separate pieces with a thin gap between them, like a
+// hitbox chart.
 const BODY_MIRROR = 'translate(360,0) scale(-1,1)';
 const BODY_SHAPES = {
-    head: '<ellipse cx="180" cy="58" rx="23" ry="27"/>',
-    neck: '<path d="M170 82 L190 82 L193 99 L167 99 Z"/>',
-    chest: '<path d="M140 102 Q180 92 220 102 L224 176 L136 176 Z"/>',
-    stomach: '<path d="M136 176 L224 176 L220 228 Q180 238 140 228 Z"/>',
-    rightArm: '<path d="M137 104 Q118 106 112 128 L102 196 L94 262 Q98 274 110 270 L118 206 L133 150 Z"/><circle cx="101" cy="279" r="9"/>',
-    rightLeg: '<path d="M140 228 Q160 238 178 236 L175 330 L172 402 L146 402 L144 330 Z"/>'
+    head: '<ellipse cx="180" cy="42" rx="20" ry="25"/>',
+    neck: '<path d="M171 64 L189 64 L191 83 L169 83 Z"/>',
+    chest: '<path d="M150 82 C135 84 126 93 126 108 L139 166 L221 166 L234 108 C234 93 225 84 210 82 C196 79 164 79 150 82 Z"/>',
+    stomach: '<path d="M139 166 L221 166 L215 198 C219 208 222 220 218 232 C198 241 162 241 142 232 C138 220 141 208 145 198 Z"/>',
+    rightArm: '<path d="M126 90 C113 92 105 102 104 117 L101 160 C99 168 97 177 96 187 L93 229 C93 238 106 239 107 231 L112 190 C113 181 116 173 119 165 L125 126 Z"/>' +
+        '<ellipse cx="99" cy="244" rx="8" ry="11.5"/>',
+    rightLeg: '<path d="M144 233 C156 239 168 241 178 240 L176 300 C175 312 172 322 171 332 L169 396 L150 396 L148 332 C146 320 144 306 143 292 Z"/>'
 };
 BODY_SHAPES.leftArm = '<g transform="' + BODY_MIRROR + '">' + BODY_SHAPES.rightArm + '</g>';
 BODY_SHAPES.leftLeg = '<g transform="' + BODY_MIRROR + '">' + BODY_SHAPES.rightLeg + '</g>';
 
-// Where each percentage is written and the point its line points to.
+// Where each percentage is written (text) and the point of the zone its line starts
+// from (at). Left column ends at x = 84, right column starts at x = 276.
 const BODY_LABELS = {
-    head: { at: [203, 48], text: [272, 48], end: false },
-    neck: { at: [169, 91], text: [88, 91], end: true },
-    chest: { at: [214, 134], text: [272, 134], end: false },
-    stomach: { at: [146, 206], text: [88, 206], end: true },
-    rightArm: { at: [101, 238], text: [62, 262], end: true },
-    leftArm: { at: [259, 238], text: [298, 262], end: false },
-    rightLeg: { at: [152, 338], text: [88, 338], end: true },
-    leftLeg: { at: [208, 338], text: [272, 338], end: false }
+    head: { at: [198, 34], text: [276, 40], end: false },
+    neck: { at: [172, 74], text: [84, 76], end: true },
+    chest: { at: [214, 118], text: [276, 120], end: false },
+    stomach: { at: [146, 204], text: [84, 170], end: true },
+    rightArm: { at: [103, 214], text: [84, 240], end: true },
+    leftArm: { at: [257, 214], text: [276, 240], end: false },
+    rightLeg: { at: [160, 330], text: [84, 332], end: true },
+    leftLeg: { at: [200, 330], text: [276, 332], end: false }
 };
 
-// Gear, drawn over the zones without hiding their color.
+// Gear, drawn over the zones: dark and thin enough to keep their color readable.
 function bodyGear(team) {
-    const line = 'fill="none" stroke="var(--text)" stroke-opacity="0.32" stroke-width="1.6" stroke-linejoin="round"';
-    const solid = 'fill="#000" fill-opacity="0.28" stroke="var(--text)" stroke-opacity="0.32" stroke-width="1.4"';
-    const boots = '<path d="M146 402 L172 402 L174 418 L136 418 Q136 408 146 402 Z" ' + solid + '/>';
-    const gloves = '<circle cx="101" cy="279" r="9" ' + solid + '/>';
-    const both = '<g>' + boots + gloves + '</g><g transform="' + BODY_MIRROR + '">' + boots + gloves + '</g>';
+    const line = 'fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"';
+    const solid = 'fill="#000" fill-opacity="0.38"';
+    const boot = '<path d="M150 396 L169 396 L172 412 L139 412 C139 404 144 398 150 396 Z" fill="#1a1b1d" stroke="var(--border-strong)" stroke-width="1"/>';
+    const glove = '<ellipse cx="99" cy="244" rx="8" ry="11.5" ' + solid + '/>';
+    const both = boot + glove + '<g transform="' + BODY_MIRROR + '">' + boot + glove + '</g>';
     if (team === 't') {
         return both +
-            // Balaclava: covers the head, with an opening for the eyes
-            '<path d="M157 62 Q157 30 180 30 Q203 30 203 62 Q203 86 180 86 Q157 86 157 62 Z" ' + solid + '/>' +
-            '<rect x="165" y="50" width="30" height="9" rx="4.5" fill="var(--bg)" fill-opacity="0.85"/>' +
+            // Balaclava over the whole head, with the eye opening
+            '<ellipse cx="180" cy="42" rx="20" ry="25" ' + solid + '/>' +
+            '<rect x="166" y="34" width="28" height="8" rx="4" fill="var(--bg)" fill-opacity="0.9"/>' +
             // Chest rig: crossed straps and a row of pouches
-            '<path d="M146 104 L214 176 M214 104 L146 176" ' + line + '/>' +
-            '<rect x="146" y="182" width="20" height="20" rx="2" ' + line + '/>' +
-            '<rect x="170" y="182" width="20" height="20" rx="2" ' + line + '/>' +
-            '<rect x="194" y="182" width="20" height="20" rx="2" ' + line + '/>';
+            '<path d="M146 90 L214 162 M214 90 L146 162" ' + line + '/>' +
+            '<path d="M148 176 h18 v18 h-18 Z M171 176 h18 v18 h-18 Z M194 176 h18 v18 h-18 Z" ' + line + '/>';
     }
     return both +
         // Helmet with a brim
-        '<path d="M155 58 Q155 26 180 26 Q205 26 205 58 L211 62 L149 62 Z" ' + solid + '/>' +
-        // Plate carrier: vest outline, plates and a belt
-        '<path d="M143 105 Q180 97 217 105 L219 214 Q180 222 141 214 Z" ' + line + '/>' +
-        '<path d="M156 120 L204 120 L204 166 L156 166 Z" ' + line + '/>' +
-        '<path d="M140 222 Q180 232 220 222" ' + line + '/>';
+        '<path d="M160 40 C160 14 200 14 200 40 L205 44 L155 44 Z" fill="#1d2228" fill-opacity="0.85" stroke="#000" stroke-opacity="0.4" stroke-width="1"/>' +
+        // Plate carrier and belt
+        '<path d="M138 92 C160 87 200 87 222 92 L218 196 C200 204 160 204 142 196 Z" ' + line + '/>' +
+        '<path d="M160 104 h40 v42 h-40 Z" ' + line + '/>' +
+        '<path d="M139 214 C160 222 200 222 221 214" ' + line + '/>';
 }
 
 // Hits per zone for a weapon class; null when the profile has nothing for it.
@@ -94,33 +96,60 @@ function bodyCounts(h, weapon) {
 
 function fmtPct(v) { return (Math.round(v * 10) / 10).toLocaleString('es-AR') + '%'; }
 
-// One figure. Shading uses a fixed scale (45% of hits = full color), so two figures
-// side by side can be compared by eye.
+// Heat scale: dark grey (no hits) → deep orange → accent orange → pale yellow. Fixed,
+// with 45% of the hits as the top, so two figures side by side compare by eye.
+const BODY_HEAT_MAX = 45;
+const BODY_HEAT_STOPS = [[0, [52, 55, 60]], [0.3, [122, 61, 23]], [0.65, [224, 123, 42]], [1, [255, 214, 150]]];
+function heatColor(share) {
+    const t = Math.max(0, Math.min(1, share / BODY_HEAT_MAX));
+    for (let i = 1; i < BODY_HEAT_STOPS.length; i++) {
+        const [t1, c1] = BODY_HEAT_STOPS[i];
+        if (t <= t1) {
+            const [t0, c0] = BODY_HEAT_STOPS[i - 1];
+            const k = (t - t0) / (t1 - t0);
+            return 'rgb(' + c0.map((v, j) => Math.round(v + (c1[j] - v) * k)).join(',') + ')';
+        }
+    }
+    return 'rgb(' + BODY_HEAT_STOPS[BODY_HEAT_STOPS.length - 1][1].join(',') + ')';
+}
+
+let bodyFigSeq = 0;
+
+// One figure, with the color scale underneath.
 function bodySvg(c, team, title) {
+    const gid = 'bodyHeat' + (++bodyFigSeq);
     const zone = key => {
         const share = c && c.total ? c.pct[key] : 0;
-        const op = c && c.total ? Math.min(0.95, 0.08 + 0.87 * share / 45) : 0;
-        return '<g class="bz" data-zone="' + key + '">' +
-            '<g fill="var(--panel-2)" stroke="var(--border-strong)" stroke-width="1.2">' + BODY_SHAPES[key] + '</g>' +
-            '<g fill="var(--accent)" fill-opacity="' + op.toFixed(3) + '" stroke="none">' + BODY_SHAPES[key] + '</g>' +
+        const fill = c && c.total ? heatColor(share) : '#2a2c30';
+        return '<g class="bz" data-zone="' + key + '" fill="' + fill + '" stroke="var(--bg)" stroke-width="2.5" stroke-linejoin="round">' +
+            BODY_SHAPES[key] +
             '<title>' + BODY_ZONE_LABEL[key] + (c ? ': ' + ((c.zones[key] || {}).hits || 0) + ' impactos (' + fmtPct(share) + ')' : '') + '</title>' +
         '</g>';
     };
     const label = key => {
         const l = BODY_LABELS[key];
-        const share = c && c.total ? fmtPct(c.pct[key]) : '–';
+        const share = c && c.total ? c.pct[key] : null;
         const anchor = l.end ? 'end' : 'start';
-        const lineEnd = l.end ? l.text[0] + 4 : l.text[0] - 4;
-        return '<line x1="' + l.at[0] + '" y1="' + l.at[1] + '" x2="' + lineEnd + '" y2="' + (l.text[1] - 4) + '" stroke="var(--muted)" stroke-opacity="0.5" stroke-width="1"/>' +
-            '<text x="' + l.text[0] + '" y="' + l.text[1] + '" text-anchor="' + anchor + '" class="bz-pct">' + share + '</text>' +
+        const lineEnd = l.end ? l.text[0] + 5 : l.text[0] - 5;
+        const color = share === null || share < 1 ? 'var(--muted)' : heatColor(Math.max(share, 15));
+        return '<circle cx="' + l.at[0] + '" cy="' + l.at[1] + '" r="2" fill="var(--text)" fill-opacity="0.7"/>' +
+            '<polyline points="' + l.at.join(',') + ' ' + lineEnd + ',' + (l.text[1] - 5) + '" fill="none" stroke="var(--text)" stroke-opacity="0.28" stroke-width="1"/>' +
+            '<text x="' + l.text[0] + '" y="' + l.text[1] + '" text-anchor="' + anchor + '" class="bz-pct" fill="' + color + '">' +
+                (share !== null ? fmtPct(share) : '–') + '</text>' +
             '<text x="' + l.text[0] + '" y="' + (l.text[1] + 13) + '" text-anchor="' + anchor + '" class="bz-name">' + BODY_ZONE_LABEL[key] + '</text>';
     };
     const order = ['rightLeg', 'leftLeg', 'stomach', 'chest', 'rightArm', 'leftArm', 'neck', 'head'];
+    const legend =
+        '<defs><linearGradient id="' + gid + '">' + BODY_HEAT_STOPS.map(s => '<stop offset="' + s[0] + '" stop-color="rgb(' + s[1].join(',') + ')"/>').join('') + '</linearGradient></defs>' +
+        '<rect x="120" y="432" width="120" height="6" rx="3" fill="url(#' + gid + ')"/>' +
+        '<text x="114" y="439" text-anchor="end" class="bz-name">0%</text>' +
+        '<text x="246" y="439" class="bz-name">' + BODY_HEAT_MAX + '% o más</text>';
     return '<figure class="body-fig">' +
-        '<svg viewBox="0 0 360 430" role="img" aria-label="' + esc(title) + '">' +
+        '<svg viewBox="0 0 360 450" role="img" aria-label="' + esc(title) + '">' +
             order.map(zone).join('') +
             '<g pointer-events="none">' + bodyGear(team) + '</g>' +
             Object.keys(BODY_LABELS).map(label).join('') +
+            legend +
         '</svg>' +
         '<figcaption>' + esc(title) + '<span class="muted">' + (c ? c.total + ' impactos' : 'sin datos') + '</span></figcaption>' +
     '</figure>';
