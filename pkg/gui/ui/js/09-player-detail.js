@@ -80,7 +80,7 @@ function openPlayer(p) {
                 '<span class="muted num" style="width:46px; flex-shrink:0;">R' + roundOf(inc.tick) + '</span>' +
                 typeTag(inc.type) +
                 '<span class="grow" title="' + esc(inc.note) + '">' + esc(inc.note) + '</span>' +
-                cmdButton(inc.gotoCmd) + playButton(inc.tick) +
+                cmdButton(inc.gotoCmd) + playButton(inc.tick, sid) +
             '</div>'
         ).join('') + '</div>';
     } else {
@@ -97,7 +97,7 @@ function openPlayer(p) {
                     '<span class="muted num" style="width:46px; flex-shrink:0;">R' + m.round + '</span>' +
                     (m.isToxicity ? '<span class="tag tag-red">Tóxico</span>' : '') +
                     '<span class="grow" style="color:var(--text); user-select:text;">' + esc(m.text) + '</span>' +
-                    playButton(m.tick) +
+                    playButton(m.tick, sid) +
                 '</div>'
             ).join('') + '</div></div>';
     }

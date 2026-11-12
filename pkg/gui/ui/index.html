@@ -397,6 +397,18 @@
                 </div>
 
                 <div class="field">
+                    <label for="cfgHotkeys">Teclas para ir al incidente anterior / siguiente</label>
+                    <select class="input" id="cfgHotkeys">
+                        <option value="ctrl-alt-arrows">Ctrl + Alt + ← / →</option>
+                        <option value="ctrl-shift-arrows">Ctrl + Shift + ← / →</option>
+                        <option value="ctrl-alt-pages">Ctrl + Alt + Re Pág / Av Pág</option>
+                        <option value="alt-pages">Alt + Re Pág / Av Pág</option>
+                        <option value="off">Desactivadas</option>
+                    </select>
+                    <div class="help">Funcionan con el juego en primer plano. Recorren los incidentes desde el último que abriste con Ver: los del mismo jugador, o todos los de la demo.</div>
+                </div>
+
+                <div class="field">
                     <label for="cfgShiftRadius">Registro de SHIFT: distancia del enemigo</label>
                     <select class="input" id="cfgShiftRadius">
                         <option value="500">500 unidades</option>
@@ -406,6 +418,35 @@
                         <option value="2000">2000 unidades</option>
                     </select>
                     <div class="help">Un enemigo que no se ve a esta distancia o menos cuenta como cerca. Se aplica a las demos que analices o re-analices después de cambiarlo.</div>
+                </div>
+
+                <!-- Automatic archive of the server's demos (js/11-settings.js, pkg/archive) -->
+                <div class="field archive-field">
+                    <label class="check" style="font-weight:600;"><input type="checkbox" id="arcEnabled"> Archivo automático de demos del servidor</label>
+                    <div class="help">Revisa la página de demos, analiza las nuevas y guarda solo las que tengan un jugador marcado como cheat o sospechoso. Las demás se borran después de analizarlas (quedan en el historial). Conviene activarlo en una sola PC.</div>
+                    <div id="arcOptions">
+                        <label for="arcDir">Carpeta donde guardar las demos</label>
+                        <input class="input mono" id="arcDir" placeholder="D:\demos">
+                        <label>Servidores <span class="muted">(ninguno marcado = todos)</span></label>
+                        <div class="checks" id="arcServers"></div>
+                        <label>Modos <span class="muted">(ninguno marcado = todos)</span></label>
+                        <div class="checks" id="arcModes"></div>
+                        <label for="arcMaps">Mapas <span class="muted">(separados por coma; vacío = todos)</span></label>
+                        <input class="input mono" id="arcMaps" placeholder="de_mirage, de_dust2, de_nuke">
+                        <label for="arcEvery">Revisar cada</label>
+                        <select class="input" id="arcEvery">
+                            <option value="30">30 minutos</option>
+                            <option value="60" selected>1 hora</option>
+                            <option value="120">2 horas</option>
+                            <option value="240">4 horas</option>
+                        </select>
+                        <label for="arcURL">Página de demos</label>
+                        <input class="input mono" id="arcURL" placeholder="https://csgo.3y33.com.ar/demos">
+                        <div class="arc-status">
+                            <span class="muted" id="arcStatus"></span>
+                            <button class="btn" onclick="runArchiveNowClick()">Revisar ahora</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div style="display:flex; justify-content:flex-end; gap:6px;">

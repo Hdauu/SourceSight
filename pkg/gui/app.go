@@ -16,6 +16,7 @@ import (
 	"github.com/jchv/go-webview2/pkg/edge"
 	"sourcesight/pkg/appdata"
 	"sourcesight/pkg/applog"
+	"sourcesight/pkg/archive"
 	"sourcesight/pkg/core"
 	"sourcesight/pkg/db"
 	"sourcesight/pkg/evidence"
@@ -498,6 +499,48 @@ func LaunchApp(initialDemoPath string) error {
 		return launcher.SaveConfig(cfg)
 	})
 
+	// saveHotkeys stores the previous / next incident keys and registers them again.
+	_ = w.Bind("saveHotkeys", func(preset string) error {
+		if _, ok := HotkeyPresets[preset]; !ok && preset != "off" {
+			return fmt.Errorf("combinación de teclas desconocida: %s", preset)
+		}
+		cfg := launcher.LoadConfig()
+		cfg.Hotkeys = preset
+		if err := launcher.SaveConfig(cfg); err != nil {
+			return err
+		}
+		go setHotkeys(preset, a.step)
+		return nil
+	})
+
+	// Automatic archive (archive.go)
+	_ = w.Bind("getArchiveStatus", func() archiveStatus { return archStatus() })
+	_ = w.Bind("runArchiveNow", func() error {
+		select {
+		case archWakeup <- struct{}{}:
+		default:
+		}
+		return nil
+	})
+	_ = w.Bind("saveArchiveConfig", func(c archive.Config) (archive.Config, error) {
+		c.Dir = strings.Trim(strings.TrimSpace(c.Dir), `"`)
+		if c.Enabled {
+			if c.Dir == "" {
+				return c, fmt.Errorf("elegí la carpeta donde guardar las demos")
+			}
+			if err := os.MkdirAll(c.Dir, 0755); err != nil {
+				return c, fmt.Errorf("no se pudo usar la carpeta %s: %v", c.Dir, err)
+			}
+		}
+		if c.URL == "" {
+			c.URL = archive.DefaultURL
+		}
+		cfg := launcher.LoadConfig()
+		cfg.Archive = c
+		applog.Printf("config: archivo automático %v en %q", c.Enabled, c.Dir)
+		return c, launcher.SaveConfig(cfg)
+	})
+
 	// getRadar returns the radar of a map from the installed CS:GO, for the minimap.
 	_ = w.Bind("getRadar", func(mapName string) (map[string]any, error) {
 		dir := launcher.LoadConfig().CSGOPath
@@ -522,16 +565,14 @@ func LaunchApp(initialDemoPath string) error {
 		return launcher.CleanCSGODir(path), nil
 	})
 
-	_ = w.Bind("launchInGame", func(tick int) error {
+	// launchInGame shows a moment in CS:GO, in first person from steamID when given,
+	// and sets the playlist for the previous / next incident hotkeys (playlist.go).
+	_ = w.Bind("launchInGame", func(tick int, steamID string) error {
 		rep, dPath := current()
-		if dPath == "" {
+		if dPath == "" || rep == nil {
 			return nil
 		}
-		tickrate := 0
-		if rep != nil {
-			tickrate = rep.Header.Tickrate
-		}
-		if err := launcher.LaunchInGame(dPath, tick, tickrate); err != nil {
+		if err := a.watch(rep, dPath, tick, steamID); err != nil {
 			a.toast("Error al abrir CS:GO: " + err.Error())
 			return nil
 		}
@@ -590,6 +631,8 @@ func LaunchApp(initialDemoPath string) error {
 		if initialDemoPath != "" {
 			go a.processQueue([]string{initialDemoPath}, false)
 		}
+		archiveOnce.Do(func() { go a.archiveLoop() })
+		hotkeysOnce.Do(func() { setHotkeys(launcher.LoadConfig().Hotkeys, a.step) })
 		return nil
 	})
 

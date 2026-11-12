@@ -64,24 +64,24 @@ func demoRef(csgoDir, demoPath string) (string, error) {
 
 // sendToRunningGame plays the demo in an open CS:GO started with -netconport.
 // It returns false when no game console is listening.
-func sendToRunningGame(ref string, tick int) bool {
+func sendToRunningGame(ref string, t Target) bool {
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", NetconPort), 400*time.Millisecond)
 	if err != nil {
 		return false
 	}
-	go playOverConsole(conn, ref, tick, false)
+	go playOverConsole(conn, ref, t, false)
 	return true
 }
 
 // launchAndPlay waits for a game just started by Steam to open its console and reach
 // the main menu, then plays the demo. "+playdemo" on the command line doesn't work:
 // it runs before the Panorama menu is ready and the game ignores it.
-func launchAndPlay(ref string, tick int) {
+func launchAndPlay(ref string, t Target) {
 	deadline := time.Now().Add(3 * time.Minute)
 	for time.Now().Before(deadline) {
 		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", NetconPort), time.Second)
 		if err == nil {
-			playOverConsole(conn, ref, tick, true)
+			playOverConsole(conn, ref, t, true)
 			return
 		}
 		time.Sleep(time.Second)
@@ -90,7 +90,7 @@ func launchAndPlay(ref string, tick int) {
 
 // playOverConsole loads the demo (unless it's the one already playing) and seeks to
 // tick once the map has loaded. Lines come from the game's console output.
-func playOverConsole(conn net.Conn, ref string, tick int, freshLaunch bool) {
+func playOverConsole(conn net.Conn, ref string, t Target, freshLaunch bool) {
 	defer conn.Close()
 	consoleMu.Lock()
 	defer consoleMu.Unlock()
@@ -124,13 +124,23 @@ func playOverConsole(conn net.Conn, ref string, tick int, freshLaunch bool) {
 		_, err := conn.Write([]byte(cmd + "\n"))
 		return err
 	}
-	gotoCmd := fmt.Sprintf("demo_gototick %d", tick)
+	seek := func() {
+		for i, cmd := range t.commands() {
+			if i == 1 {
+				// The camera commands must come after the seek has landed
+				time.Sleep(400 * time.Millisecond)
+			}
+			if send(cmd) != nil {
+				return
+			}
+		}
+	}
 
 	if freshLaunch {
 		waitFor("-> CSGO_GAME_UI_STATE_MAINMENU", 45*time.Second)
 		time.Sleep(2 * time.Second)
 	} else if ref == lastPlayed {
-		_ = send(gotoCmd)
+		seek()
 		return
 	}
 
@@ -141,7 +151,7 @@ func playOverConsole(conn net.Conn, ref string, tick int, freshLaunch bool) {
 	// Seeking during the loading screen is ignored: wait until the map is in game
 	waitFor("-> CSGO_GAME_UI_STATE_INGAME", 90*time.Second)
 	time.Sleep(1500 * time.Millisecond)
-	_ = send(gotoCmd)
+	seek()
 }
 
 // gameRunning reports whether csgo.exe is running.
@@ -159,4 +169,46 @@ func gameRunning() bool {
 		}
 	}
 	return false
+}
+
+// Target is a moment to show: a tick and, optionally, the player whose eyes to watch
+// it from and a short note printed in the game console.
+type Target struct {
+	Tick    int
+	SteamID uint64
+	Note    string
+}
+
+// steamID64Base turns a SteamID64 into the 32-bit account ID the game uses.
+const steamID64Base = 76561197960265728
+
+// commands are the console commands for a target: seek first, then the camera on the
+// player in first person, then the note.
+func (t Target) commands() []string {
+	cmds := []string{fmt.Sprintf("demo_gototick %d", t.Tick)}
+	if t.SteamID > steamID64Base {
+		cmds = append(cmds,
+			fmt.Sprintf("spec_player_by_accountid %d", t.SteamID-steamID64Base),
+			"spec_mode 4")
+	}
+	if note := consoleSafe(t.Note); note != "" {
+		cmds = append(cmds, `echo "SourceSight: `+note+`"`)
+	}
+	return cmds
+}
+
+// consoleSafe keeps text that can't break out of an echo: player names come from the
+// demo and anyone can put ";" or quotes in theirs to run commands in the console.
+func consoleSafe(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r == ';' || r == '"' || r == '\'' || r == '\\' || r < ' ' || r == 0x7f:
+			continue
+		case b.Len() >= 120:
+			return b.String()
+		}
+		b.WriteRune(r)
+	}
+	return strings.TrimSpace(b.String())
 }

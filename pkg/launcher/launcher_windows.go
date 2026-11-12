@@ -116,7 +116,7 @@ func FindCSGODirectory() (string, error) {
 // LaunchInGame shows the demo in CS:GO at the given tick (demo ticks; tickrate turns
 // the configured pre-roll seconds into ticks). An open game started by SourceSight is
 // reused through its remote console; otherwise the game is started through Steam.
-func LaunchInGame(demoPath string, tick, tickrate int) error {
+func LaunchInGame(demoPath string, t Target, tickrate int) error {
 	csgoDir, err := FindCSGODirectory()
 	if err != nil {
 		return err
@@ -134,9 +134,9 @@ func LaunchInGame(demoPath string, tick, tickrate int) error {
 	if prerollTicks <= 0 {
 		prerollTicks = 3 * tickrate
 	}
-	preroll := max(tick-prerollTicks, 1)
+	t.Tick = max(t.Tick-prerollTicks, 1)
 
-	if sendToRunningGame(ref, preroll) {
+	if sendToRunningGame(ref, t) {
 		return nil
 	}
 	if gameRunning() {
@@ -161,7 +161,7 @@ func LaunchInGame(demoPath string, tick, tickrate int) error {
 	if err := start.Start(); err != nil {
 		return err
 	}
-	go launchAndPlay(ref, preroll)
+	go launchAndPlay(ref, t)
 	return nil
 }
 

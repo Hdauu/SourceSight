@@ -7,8 +7,8 @@ function reanalyze() {
     if (window.reanalyzeCurrent) window.reanalyzeCurrent();
 }
 
-function playInGame(tick) {
-    if (window.launchInGame) window.launchInGame(tick);
+function playInGame(tick, steamId) {
+    if (window.launchInGame) window.launchInGame(tick, steamId || '');
 }
 
 function openLink(url) {

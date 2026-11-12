@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"sourcesight/pkg/archive"
 	"sourcesight/pkg/core"
 	"sourcesight/pkg/db"
 	"sourcesight/pkg/history"
@@ -34,6 +37,10 @@ type BotConfig struct {
 	MaxParallel int `json:"maxParallel,omitempty"`
 	// ShiftRadius: SHIFT log distance in units (default 1000).
 	ShiftRadius float64 `json:"shiftRadius,omitempty"`
+	// Archive: automatic download of the server's demos (see pkg/archive); flagged
+	// demos are kept and announced in ArchiveChannelID (or the first of ChannelIDs).
+	Archive          archive.Config `json:"archive"`
+	ArchiveChannelID string         `json:"archiveChannelId,omitempty"`
 }
 
 // slots limits how many demos are analyzed at once; queued counts demos waiting or
@@ -336,6 +343,10 @@ func main() {
 	}
 	defer dg.Close()
 
+	if cfg.Archive.Enabled {
+		go archiveLoop(dg, cfg)
+	}
+
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
@@ -417,4 +428,48 @@ func shiftSummary(rep *core.DemoReport) string {
 		out += fmt.Sprintf("\n• **%s**: %d", n, per[n])
 	}
 	return out
+}
+
+// archiveLoop checks the server's demo page every interval (pkg/archive): new demos
+// are analyzed into the history, flagged ones are kept and announced.
+func archiveLoop(s *discordgo.Session, cfg *BotConfig) {
+	channel := cfg.ArchiveChannelID
+	if channel == "" && len(cfg.ChannelIDs) > 0 {
+		channel = cfg.ChannelIDs[0]
+	}
+	fmt.Printf("[+] Archivo automático: %s cada %v, guarda en %s\n", cfg.Archive.URL, cfg.Archive.Interval(), cfg.Archive.Dir)
+	analyze := func(path string) (*core.DemoReport, error) {
+		// Shares the analysis slots with demos uploaded to Discord
+		slots <- struct{}{}
+		defer func() { <-slots }()
+		rep, err := parser.ParseDemo(path, parser.ParserOptions{ShiftRadius: cfg.ShiftRadius})
+		if err != nil {
+			return nil, err
+		}
+		saveToHistory(rep, path)
+		return rep, nil
+	}
+	for {
+		err := archive.Run(context.Background(), cfg.Archive, analyze, func(r archive.Result) {
+			switch {
+			case r.Err != nil:
+				fmt.Printf("[-] Archivo: %s: %v\n", r.Demo.File, r.Err)
+			case r.Kept:
+				fmt.Printf("[+] Archivo: guardada %s (%s)\n", r.Demo.File, r.Level)
+				if channel != "" {
+					label := "Sospechosa"
+					if r.Level == core.LevelCheat {
+						label = "Cheat detectado"
+					}
+					msg := fmt.Sprintf("**Demo archivada** · %s\n`%s` · servidor #%d %s · %s\nDetecciones: `%s`\nGuardada en la PC del bot: `%s`",
+						label, r.Demo.File, r.Demo.Server, r.Demo.Mode, r.Demo.Map, strings.Join(r.Flags, " + "), r.Path)
+					_, _ = s.ChannelMessageSend(channel, msg)
+				}
+			}
+		})
+		if err != nil && !errors.Is(err, archive.ErrBusy) {
+			fmt.Printf("[-] Archivo: %v\n", err)
+		}
+		time.Sleep(cfg.Archive.Interval())
+	}
 }

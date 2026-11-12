@@ -41,6 +41,7 @@ The app itself is in Spanish; this document describes it in English.
 - [Players: averages across demos](#players-averages-across-demos)
 - [Confirming a cheater](#confirming-a-cheater)
 - [Watch in game](#watch-in-game)
+- [Automatic demo archive](#automatic-demo-archive)
 - [Exporting evidence](#exporting-evidence)
 - [Discord bot](#discord-bot)
 - [Updates](#updates)
@@ -507,6 +508,37 @@ If CS:GO is open but you started it yourself from Steam, it has no remote consol
 
 Every incident also has its `demo_gototick` command to copy and paste by hand.
 
+
+**First-person camera.** When the moment belongs to a player (an incident, a SHIFT case, a kill on the minimap, a chat message), after seeking the app sends the game `spec_player_by_accountid` with the player's account number (from their SteamID) and `spec_mode 4`: the demo watches from their eyes. The game console shows a `SourceSight: …` line with which incident it is.
+
+**Previous / next incident.** With the game in front, **Ctrl + Alt + ←** and **Ctrl + Alt + →** jump to the previous or next incident, also in first person. They walk the list of the last **Ver** you pressed: that player's incidents, or every incident of the demo if the moment wasn't a player's. They are Windows global hotkeys received by SourceSight and forwarded to the game through the remote console: no bind or game file is touched. They can be changed in Settings (Ctrl + Shift + arrows, Ctrl + Alt + Page Up / Page Down, Alt + Page Up / Page Down) or turned off. Function keys aren't used because CS:GO already uses several (F10 opens the quit dialog).
+
+**Safety.** Anyone picks their player name, so before a name is shown in the game console `;`, quotes and backslashes are removed: a name can't sneak commands in.
+
+## Automatic demo archive
+
+`pkg/archive`
+
+**What for.** Servers delete their demos after a few days (3y33, after 3). The automatic archive checks the demo page, analyzes new demos and **keeps only those where some player came out as cheat or suspicious**. That way the demos that matter stay forever, even after the server deletes them.
+
+**How it works.**
+1. Every so often (30 minutes to 4 hours, 1 hour by default) it reads the demo page (`https://csgo.3y33.com.ar/demos` by default) and its next pages, until it finds a whole page it already checked.
+2. It keeps the new demos that pass the filters: **server** (#1 to #8), **mode** (Competitivo, AutoMIX, Retake, Casual, DeathMatch), **map**, and skips those under 5 MB (warmups, empty servers).
+3. It downloads them **one at a time**, oldest first (the closest to being deleted), straight into the chosen folder, and checks they arrived whole.
+4. It analyzes them like any demo: they go into the history and count toward the players' averages. A match already in the history isn't counted twice.
+5. If some player came out as cheat or suspicious, **the file stays** in the folder. Otherwise it's deleted right away: the disk doesn't fill up.
+6. It remembers which demos it checked, so it doesn't download them again.
+
+**Where it runs.** In the app (while open) and in the bot (24/7), wherever you turn it on. If both are on the same PC, a lock file keeps them from downloading the same demo at once. It's a per-PC option and comes off: it's best turned on **on one PC only**, the bot's, so the same demos aren't downloaded several times.
+
+**Internet data.** Downloading doesn't take disk, but it does use internet: downloading everything would be about 15 GB a day on 3y33. That's what the filters are for; for example, Competitivo only downloads much less.
+
+**Settings.**
+- **App:** Settings → "Archivo automático de demos del servidor": folder, servers, modes, maps, how often to check, demo page and the **Revisar ahora** (check now) button, with the result of the last check.
+- **Bot:** in `bot_config.json`, `archive` (`enabled`, `dir`, `servers`, `modes`, `maps`, `minMB`, `everyMin`, `url`) and `archiveChannelId`, the channel where each kept demo is announced (if missing, the first of `channelIds`).
+
+**Limits.** It reads the page the way a browser sees it: if the site changes its layout, the reader (`ParsePage`) has to be adapted. It only works with pages that allow downloading demos without logging in.
+
 ## Exporting evidence
 
 - **Exportar evidencia** (in the player detail) creates a printable HTML with the player's data, their incidents with tick and command, and the demo's SHA-256, so another admin can check it's the same file.
@@ -533,6 +565,9 @@ Exports are saved in `Documents\SourceSight`.
 | `channelIds` | Channels it listens to (empty = all) | all |
 | `maxDemoMB` | Maximum demo size | 250 |
 | `maxParallel` | Demos analyzed at once | 2 |
+| `shiftRadius` | SHIFT log distance | 1000 |
+| `archive` | Automatic archive (see [Automatic demo archive](#automatic-demo-archive)) | off |
+| `archiveChannelId` | Channel where kept demos are announced | the first of `channelIds` |
 
 If more demos arrive than `maxParallel`, the rest wait their turn and the bot says how many are ahead. The bot shares the history and the reoffender database with the app when both run on the same PC and user, and doesn't count a match twice.
 
@@ -590,6 +625,7 @@ Without `-X sourcesight/pkg/version.Version=vX.Y.Z` in `-ldflags` the version is
 | `pkg/gui` | The window; the page is in `pkg/gui/ui` (separate HTML, CSS and JS) |
 | `pkg/launcher` | Watch in game |
 | `pkg/radar` | Radars from the installed game for the minimap |
+| `pkg/archive` | Automatic archive of the server's demos |
 
 `third_party/go-webview2` is a copy of [jchv/go-webview2](https://github.com/jchv/go-webview2) (MIT) with a small patch to receive the real path of files dropped on the window. Details in `third_party/go-webview2/SOURCESIGHT_PATCH.md`.
 

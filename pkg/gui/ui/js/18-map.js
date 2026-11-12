@@ -255,8 +255,8 @@ function drawKills(ctx, md, sel, inRound, onFloor) {
         }
         const info = '<b>' + esc(k.killer) + '</b> mató a <b>' + esc(k.victim) + '</b>' +
             '<div class="muted">' + esc(k.weapon || '') + (k.headshot ? ' · headshot' : '') + ' · ronda ' + roundOf(k.tick) + ' · a ' + Math.round(Math.hypot(k.kx - k.vx, k.ky - k.vy)) + ' u</div>';
-        if (kOn) mapState.markers.push({ x: kx, y: ky, r: 10, tick: k.tick, info: info });
-        if (vOn) mapState.markers.push({ x: vx, y: vy, r: 10, tick: k.tick, info: info });
+        if (kOn) mapState.markers.push({ x: kx, y: ky, r: 10, tick: k.tick, sid: k.killerId, info: info });
+        if (vOn) mapState.markers.push({ x: vx, y: vy, r: 10, tick: k.tick, sid: k.victimId, info: info });
     });
 }
 
@@ -273,7 +273,7 @@ function drawIncidents(ctx, sel, inRound, onFloor) {
             ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
             ctx.beginPath(); ctx.moveTo(x, y - 10); ctx.lineTo(x + 10, y); ctx.lineTo(x, y + 10); ctx.lineTo(x - 10, y); ctx.closePath();
             ctx.fill(); ctx.stroke();
-            mapState.markers.push({ x: x, y: y, r: 12, tick: inc.tick,
+            mapState.markers.push({ x: x, y: y, r: 12, tick: inc.tick, sid: sid,
                 info: typeTag(inc.type) + ' <b>' + esc(p.name) + '</b><div class="muted">ronda ' + roundOf(inc.tick) + '</div><div style="margin-top:4px;">' + esc(inc.note) + '</div>' });
         });
     });
@@ -301,7 +301,7 @@ function drawShift(ctx, sel, inRound, onFloor) {
         ctx.fillStyle = '#d4b23f'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 8, y + 7); ctx.lineTo(x - 8, y + 7); ctx.closePath();
         ctx.fill(); ctx.stroke();
-        mapState.markers.push({ x: x, y: y, r: 11, tick: c.tick,
+        mapState.markers.push({ x: x, y: y, r: 11, tick: c.tick, sid: c.steamId,
             info: '<span class="tag tag-yellow">SHIFT</span> <b>' + esc(c.player) + '</b><div class="muted">ronda ' + c.round + ' · ' + c.presses + (c.presses === 1 ? ' apretada' : ' apretadas') + ' · ' + c.heldSecs.toLocaleString('es-AR') + ' s</div>' +
                 '<div style="margin-top:4px;">Cerca sin ver: ' + (c.enemies || []).map(esc).join(', ') + ' (a ' + c.minDist + ' u)</div>' });
     });
@@ -319,7 +319,7 @@ document.addEventListener('click', e => {
         if (d <= m.r * 1.6 && d < bestD) { best = m; bestD = d; }
     });
     if (!best) return;
-    document.getElementById('mapInfo').innerHTML = best.info + '<div style="margin-top:8px;">' + playButton(best.tick) + '</div>';
+    document.getElementById('mapInfo').innerHTML = best.info + '<div style="margin-top:8px;">' + playButton(best.tick, best.sid) + '</div>';
 });
 
 // Opens the minimap filtered to one player, with their path (from the player detail).

@@ -28,8 +28,10 @@ function cmdButton(cmd, label) {
     return '<button class="cmd" onclick="event.stopPropagation(); copyText(\'' + esc(cmd) + '\', \'Copiado: ' + esc(cmd) + '\')" title="Copiar">' + esc(label || cmd) + icon('copy', 'ic-sm') + '</button>';
 }
 
-function playButton(tick) {
-    return '<button class="play" onclick="event.stopPropagation(); playInGame(' + tick + ')" title="Abrir en CS:GO">' + icon('play') + 'Ver</button>';
+// steamId (optional): the game opens in first person from that player's eyes.
+function playButton(tick, steamId) {
+    const sid = steamId ? String(steamId).replace(/\D/g, '') : '';
+    return '<button class="play" onclick="event.stopPropagation(); playInGame(' + tick + ', \'' + sid + '\')" title="Abrir en CS:GO' + (sid ? ' desde los ojos del jugador' : '') + '">' + icon('play') + 'Ver</button>';
 }
 
 const RED_TYPES = /TRIGGER|SILENT|WALL/;

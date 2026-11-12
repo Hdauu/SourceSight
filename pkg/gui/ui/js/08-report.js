@@ -99,7 +99,7 @@ function renderTimeline() {
             '<td>' + typeTag(inc.type) + '</td>' +
             '<td class="player">' + esc(inc.player) + '</td>' +
             '<td>' + cmdButton(inc.gotoCmd) + '</td>' +
-            '<td>' + playButton(inc.tick) + '</td>' +
+            '<td>' + playButton(inc.tick, inc.steamId) + '</td>' +
             '<td class="wrap muted" style="min-width:260px;">' + esc(inc.note) + '</td>' +
         '</tr>'
     ).join('');
@@ -161,7 +161,7 @@ function renderChat() {
             '<td class="wrap" style="min-width:240px; color:var(--text); user-select:text;">' + esc(m.text) + '</td>' +
             '<td>' + tag + '</td>' +
             '<td>' + cmdButton(m.gotoCmd, String(m.tick)) + '</td>' +
-            '<td class="r">' + playButton(m.tick) + '</td>' +
+            '<td class="r">' + playButton(m.tick, m.senderSteamId) + '</td>' +
         '</tr>';
     }).join('');
 }

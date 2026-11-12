@@ -66,7 +66,7 @@ function renderShift() {
             '<td class="r num">' + c.heldSecs.toLocaleString('es-AR') + ' s</td>' +
             '<td class="r num">' + c.minDist + ' u</td>' +
             '<td>' + cmdButton(c.gotoCmd) + '</td>' +
-            '<td class="r">' + playButton(c.tick) + '</td>' +
+            '<td class="r">' + playButton(c.tick, c.steamId) + '</td>' +
         '</tr>'
     ).join('');
     document.getElementById('shiftMore').style.display = shown.length < rows.length ? 'block' : 'none';

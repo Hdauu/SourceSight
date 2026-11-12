@@ -100,7 +100,7 @@ func fakeGame(t *testing.T) (got chan string) {
 func TestSendToRunningGame(t *testing.T) {
 	got := fakeGame(t)
 	lastPlayed = ""
-	if !sendToRunningGame("sourcesight_ab/demo1", 5000) {
+	if !sendToRunningGame("sourcesight_ab/demo1", Target{Tick: 5000}) {
 		t.Fatal("did not connect to the console")
 	}
 	want := []string{`playdemo "sourcesight_ab/demo1"`, "demo_gototick 5000"}
@@ -115,7 +115,7 @@ func TestSendToRunningGame(t *testing.T) {
 		}
 	}
 	// Same demo again: only seek, no reload
-	sendToRunningGame("sourcesight_ab/demo1", 9000)
+	sendToRunningGame("sourcesight_ab/demo1", Target{Tick: 9000})
 	select {
 	case line := <-got:
 		if line != "demo_gototick 9000" {
@@ -155,7 +155,7 @@ func TestFreshLaunchWaitsForMenu(t *testing.T) {
 		}
 	}()
 	lastPlayed = ""
-	go launchAndPlay("sourcesight_ab/demo2", 700)
+	go launchAndPlay("sourcesight_ab/demo2", Target{Tick: 700})
 	for _, w := range []string{`playdemo "sourcesight_ab/demo2"`, "demo_gototick 700"} {
 		select {
 		case line := <-got:
@@ -165,5 +165,21 @@ func TestFreshLaunchWaitsForMenu(t *testing.T) {
 		case <-time.After(10 * time.Second):
 			t.Fatalf("timeout waiting for %q", w)
 		}
+	}
+}
+
+func TestTargetCommands(t *testing.T) {
+	got := Target{Tick: 1200, SteamID: 76561198662298803, Note: `tatatito"; quit; "`}.commands()
+	want := []string{
+		"demo_gototick 1200",
+		"spec_player_by_accountid 702033075",
+		"spec_mode 4",
+		`echo "SourceSight: tatatito quit"`,
+	}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("commands =\n%q\nwant\n%q", got, want)
+	}
+	if c := (Target{Tick: 5}).commands(); len(c) != 1 {
+		t.Fatalf("without player only the seek, got %q", c)
 	}
 }
