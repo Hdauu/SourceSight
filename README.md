@@ -15,68 +15,492 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT%20%2B%20Commons%20Clause-2a2c30" alt="License"></a>
 </p>
 
-A tool for CS:GO server staff. Open a demo (`.dem`) and it flags players whose behavior doesn't look human: autobunny, triggerbot, spinbot, wallhack, macros. Every incident comes with its exact tick so you can go and watch it in-game.
+A tool for CS:GO (Legacy) server staff. Open a demo (`.dem`) and it flags players whose behavior doesn't look human: autobunny, triggerbot, spinbot, wallhack, macros and more. Every incident comes with its exact tick so you can watch it in-game with one click.
 
 Runs on Windows, fully local. Nothing is uploaded anywhere.
 
-## What it detects
+> **Results are leads, not proof.** Every detection explains what it measured and with which numbers, and comes with the command to go and watch it. Watch the demo before punishing anyone.
 
-| Detection | What it looks at | When it flags |
-|---|---|---|
-| Autobunny | Jumps on the first tick of touching the ground | 75% perfect hops or more over 10+ jumps. With 30+ jumps, 55% or 5 in a row is suspicious |
-| Triggerbot | Time between an enemy entering the crosshair and the shot | Average under 80 ms with a deviation under 15 ms |
-| Aimlock / spinbot | Turns of more than 45° in a single tick | Several within one second: 50+ per match is a cheat, 10–49 is suspicious |
-| Silent aim | Gap between where the player looks and where the hit lands | 3 hits more than 35° off |
-| Wallhack | Tracking an enemy the player cannot see | 1 s of tracking with 20° of travel, 3 times |
-| Prefire | Damage dealt right after an enemy becomes visible to the player | 35% or more of their fights under 100 ms, median under 150 ms, at least 15 fights (suspicious) |
-| Macro | Pistol fire rhythm that is too regular | Deviation under 1.5 ms over 10 shots |
-| Blind / smoke kills | Kills while fully flashed or through smoke without prior sight | 4 blind or 5 through smoke |
-| Admins | `!slay`, `sm_kick`, etc., and `[SM]` server notices | Punishing whoever killed the admin less than 5 s earlier is flagged as revenge |
-| Chat | Severe insults, spam binds | — |
+The app itself is in Spanish; this document describes it in English.
 
-Results are **leads, not proof**. Each incident includes its `demo_gototick` command so you can confirm it by watching the demo before banning anyone.
+## Contents
 
-Every player gets a level:
-
-| Level | Meaning |
-|---|---|
-| **Cheat detected** | Crossed a strong threshold: autobunny, triggerbot, aimlock/spinbot, silent aim, wallhack or macro |
-| **Suspicious** | Weaker signs worth a look: high bhop or perfect-hop streaks, a few aim snaps, prefire, blind or through-smoke kills |
-| **Conduct** | Not cheating, but relevant to staff: AFK, team-flashing |
-| **Clean** | Nothing found |
-| **Confirmed** | Set by a staff member after watching the demo, never by the app. Saved per SteamID |
+- [Install](#install)
+- [Quick start](#quick-start)
+- [How a demo is analyzed](#how-a-demo-is-analyzed)
+- [Levels](#levels)
+- [Detections](#detections)
+  - [Autobunny](#autobunny) · [Triggerbot](#triggerbot) · [Aimlock and spinbot](#aimlock-and-spinbot) · [Silent aim](#silent-aim) · [Wallhack](#wallhack) · [Prefire](#prefire) · [Macro](#macro) · [Blind kills](#blind-kills) · [Kills through smoke](#kills-through-smoke) · [AFK](#afk) · [Team flashes](#team-flashes)
+- [Where they hit: the body figure](#where-they-hit-the-body-figure)
+- [Ping and lag](#ping-and-lag)
+- [Automatic observations](#automatic-observations)
+- [Admins and chat](#admins-and-chat)
+- [History and duplicate demos](#history-and-duplicate-demos)
+- [Players: averages across demos](#players-averages-across-demos)
+- [Confirming a cheater](#confirming-a-cheater)
+- [Watch in game](#watch-in-game)
+- [Exporting evidence](#exporting-evidence)
+- [Discord bot](#discord-bot)
+- [Updates](#updates)
+- [Where data is stored](#where-data-is-stored)
+- [What isn't detected](#what-isnt-detected)
+- [Building and testing](#building-and-testing)
+- [Releasing](#releasing)
+- [License](#license)
 
 ## Install
 
 1. Download **`SourceSight-Setup-vX.Y.Z.exe`** from the [latest release](https://github.com/Hdauu/SourceSight/releases/latest).
-2. Run it. It installs for your user only, no administrator rights needed.
-3. Windows may show *"Windows protected your PC"* because the installer isn't code-signed. Click **More info → Run anyway**.
+2. Run it. It installs for your user only, without asking for administrator rights.
+3. *"Windows protected your PC"* may show up because the installer isn't signed. Click **More info → Run anyway**.
 
-Only need the Discord bot? The release also has `SourceSightBot.exe` on its own, no install required.
+Only need the Discord bot? The same release has a standalone `SourceSightBot.exe`, nothing to install. See [Discord bot](#discord-bot).
 
 Requires the WebView2 runtime, which ships with Windows 10 and 11.
 
-**Updates:** on launch the app checks GitHub for a new version and offers to install it with one click. It downloads the installer, checks it against the SHA-256 published by GitHub, updates the app, CLI and bot, and reopens SourceSight.
+## Quick start
 
-## Usage
+1. Drop one or more demos (or a whole folder) on the window, or use **Abrir demos** (open demos). The installer also adds *Open with → SourceSight* for `.dem` files.
+2. With one demo its report opens. With several, you see each one's progress and a summary at the end; click any to open it.
+3. Click a player to see their metrics, where they hit, their incidents per round and the **Ver** (watch) button of each one.
+4. The **Jugadores** (players) tab adds each player up across all your demos and compares them with everyone else.
 
-- Drop one or more demos (or a whole folder) onto the window, or use **Open demos**. The installer also adds *Open with → SourceSight* for `.dem` files.
-- Every analyzed demo stays in the **history**; reopening it is instant. Filter it by level (cheat, suspicious, clean) or by detection.
-- If a demo is the same file or the same match as one already in the history (renamed, copied or recorded twice), the app asks whether to replace it, keep both or discard it, so no match is counted twice.
-- Click a player to see their metrics and incidents per round, and mark them as a confirmed cheater after reviewing the demo.
-- The **Players** tab averages every player across all your demos and compares them with everyone else. Search by name, SteamID64, profile link, `STEAM_0:X:Y` or `[U:1:N]`.
-- **Export evidence** creates a printable HTML file with the incidents and the demo's SHA-256, to hand to another admin.
-- **Watch** opens CS:GO at the incident's tick (set the game folder in Settings).
+To use **Ver**, set the CS:GO folder once in Settings (icon at the top right).
 
-Data lives in `%APPDATA%\SourceSight`, exports in `Documents\SourceSight`, and a diagnostics log in `%APPDATA%\SourceSight\sourcesight.log`.
+## How a demo is analyzed
+
+SourceSight reads the demo with [demoinfocs-golang](https://github.com/markus-wa/demoinfocs-golang) v4 (the last one that supports CS:GO; v5 is CS2 only) and walks through the match tick by tick. On every tick, for every living player, it takes their position, where they look, which buttons they press, their speed and which enemies they can see. Each detector gathers evidence as the match goes on. At the end the thresholds are applied and the report is built.
+
+A 35-minute demo at 128 tick (about 270,000 ticks) takes 4 to 8 seconds.
+
+**Several demos at once.** When you open several, they are analyzed in parallel:
+
+- One analysis per CPU thread, minus one left free so the window stays responsive.
+- Each analysis uses up to about 300 MB of memory (measured: a 207 MB demo took about 210 MB), so it never uses more than half the free RAM: with little memory it analyzes fewer at once.
+- The heavy part (reading and analyzing) runs in parallel. Saving to the history, asking about duplicates and updating the reoffender database happen **one at a time**, in the order demos finish. So if you drop two copies of the same match together, the second is still recognized as a duplicate.
+- The screen shows each demo with its state (queued, checking, analyzing, saving, done, already stored, duplicate, error, canceled), its progress bar, its result and how long it took. On top there is an overall bar with the time left. **Cancelar** (cancel) really stops the running analyses.
+- At the end there is a summary ("2 con cheat · 1 sospechosa · 5 limpias…").
+
+Measured with 12 real demos on a 12-thread CPU: 62 s one by one, 11 s in parallel. Reports come out identical either way, and a test checks it.
+
+## Levels
+
+Every player gets a level. A demo's level is the worst of its players.
+
+| Level | Meaning |
+|---|---|
+| **Cheat detectado** (cheat detected) | Crossed a strong threshold: autobunny, triggerbot, aimlock/spinbot, silent aim, wallhack or macro |
+| **Sospechoso** (suspicious) | Weaker signs worth a look: high bhop or perfect-hop streaks, some sharp turns, prefire, blind or through-smoke kills |
+| **Conducta** (conduct) | Not cheating but relevant to staff: AFK, flashing their own team |
+| **Limpio** (clean) | Nothing found |
+| **Confirmado** (confirmed) | Set by an admin after watching the demo, never by the app. Stored per SteamID (see [Confirming a cheater](#confirming-a-cheater)) |
+
+The history can be filtered by level and by detection category.
+
+## Detections
+
+All thresholds live in `pkg/core/constants.go`, and the rules that set the level in `pkg/core/state.go` and `pkg/core/level.go`. Times defined in ticks are meant for 64 tick and scaled to the demo's real tickrate, so the same rule holds for 64- and 128-tick demos.
+
+Each detection explains: what it looks for, which data it uses, how it computes, when it flags and why that number, what can fool it and how to verify it.
+
+### Autobunny
+
+`pkg/modules/bhop.go` · level **cheat** (AUTOBUNNY) or **suspicious** (SOSPECHOSO-BHOP)
+
+**What it looks for.** Scripts that jump on their own the exact moment the player touches the ground, to chain jumps without losing speed.
+
+**Data.** Whether the player is on the ground (`FL_ONGROUND` flag), whether they press jump (`IN_JUMP`), ladders, water and speed, every tick.
+
+**Computation.**
+- When the player lands, the tick is noted. When they take off holding jump, the ticks spent on the ground are counted.
+- Taking off after 0 or 1 tick on the ground is a **perfect** hop: the jump runs before friction and no speed is lost.
+- Taking off after more than 15 ticks on the ground doesn't count: that's walking and jumping, not bunny hopping. Ladders and water don't count.
+- Total jumps, perfect ones, the percentage (*perfs*) and the longest streak of perfect hops in a row are stored.
+
+**When it flags.**
+- **AUTOBUNNY (cheat):** 75% perfect or more, over at least 10 jumps.
+- **SOSPECHOSO-BHOP:** with 30+ jumps, 55% perfect or a streak of 5 in a row.
+
+**Why.** A person with the mouse wheel lands 20% to 50% perfect hops. A sustained 75% isn't doable by hand. A streak of 5 is very unlikely, but a good bhopper can pull it off once, so on its own it's only suspicious. Fewer than 30 jumps is too small a sample for "suspicious".
+
+**Limits.** A server with its own autobunny (bhop plugin) makes everyone jump perfectly. On those servers this detection is useless.
+
+**How to verify.** In the demo, with `host_timescale 0.25`, watch how they chain the jumps. With a script the player never loses or gains speed irregularly and never "misses" a hop. Every streak of 5+ is an incident with its tick.
+
+### Triggerbot
+
+`pkg/modules/trigger.go` · level **cheat** (TRIGGERBOT)
+
+**What it looks for.** Programs that fire on their own as soon as the crosshair is over an enemy.
+
+**Data.** Where the player looks, the position of their eyes and the collision box of every living enemy, every tick, and the moment they press fire.
+
+**Computation.**
+- A ray is cast from the player's eyes in the direction they look and intersected with each enemy's box.
+- When the ray enters an enemy, a timer starts. When fire is pressed, the elapsed time (*reaction*) is recorded, between 0 and 1.5 s.
+- If the crosshair leaves the enemy before the shot, the measurement is dropped.
+- Reactions during a lag spike are discarded (see [Ping and lag](#ping-and-lag)).
+
+**When it flags.** With at least 4 reactions measured, an average under **80 ms** and a deviation under **15 ms**.
+
+**Why.** A person averages 150 to 250 ms, with a lot of variation from one time to the next. A triggerbot reacts fast and always the same. Both are required: speed and regularity.
+
+**Limits.** It measures against the collision box, not the exact body shape. A player already spraying when the enemy crosses their crosshair doesn't produce a new reaction.
+
+**How to verify.** Watch the incidents in slow motion: with a triggerbot the shot comes right as the crosshair touches the enemy, even when they barely peek.
+
+### Aimlock and spinbot
+
+`pkg/modules/aim.go` · level **cheat** (AIMLOCK) or **suspicious** (SOSPECHOSO-AIM)
+
+**What it looks for.** A view that jumps onto the target (aimlock) or spins nonstop (spinbot / anti-aim).
+
+**Data.** The view angles (pitch and yaw) every tick.
+
+**Computation.**
+- How much the view turned between one tick and the next is measured, correcting the 359° → 0° wrap.
+- A turn of more than **45° in a single tick** is a *snap* (at 128 tick, a tick is 7.8 ms).
+- The first 3 seconds after spawning and changes to a pitch of exactly 0 are ignored: those are angles forced by the server on spawn or teleport.
+
+**When it flags.** Only when snaps cluster: at least 5 within one second and 10 or more in the match.
+- 50 snaps or more: **AIMLOCK (cheat)**.
+- 10 to 49: **SOSPECHOSO-AIM**.
+
+**Why.** A fast human flick can produce a single snap, but never 5 in a second. A spinbot produces hundreds: the yaw jumps to a different value every tick, usually with the pitch stuck at ±89°. Between 10 and 49 it can be a cheat toggled briefly or odd flicks, worth a look.
+
+**Limits.** A "smooth" aimbot that turns fast but spread over several ticks never exceeds 45° per tick and isn't caught this way.
+
+**How to verify.** Go to the incident's tick and watch first-person: a spinbot shows as the view spinning out of control. From outside, the model spins or looks at the floor.
+
+### Silent aim
+
+`pkg/modules/aim.go` · level **cheat** (SILENT AIM)
+
+**What it looks for.** Cheats that send the server a different firing angle from the one on screen: the bullet hits even though the crosshair isn't on the enemy.
+
+**Data.** Where the shooter was looking when firing, the position of their eyes, and the victim's position when damaged.
+
+**Computation.** When a shot deals damage (up to 16 ticks after the shot), the direction the shooter was looking is compared with the real direction from their eyes to the victim's chest.
+
+**When it flags.** When the difference exceeds **35°**, 3 times in the match.
+
+**Why.** Firing on the move or jumping with SMGs and shotguns, spread can reach about 35°. More than that isn't weapon inaccuracy: the bullet went somewhere other than the view.
+
+**Limits.** Wallbangs and odd damage registration can occasionally give large differences, hence the 3 required.
+
+**How to verify.** At the incident's tick, first-person: the enemy takes damage without being near the crosshair.
+
+### Wallhack
+
+`pkg/modules/wallhack.go` · level **cheat** (WALLHACK)
+
+**What it looks for.** Players following with their crosshair an enemy who is behind a wall.
+
+**Data.** The demo stores which enemies each player has "spotted" (`m_bSpottedByMask`, the same data that feeds the radar). Plus where each player looks, positions and speeds.
+
+**Computation.**
+- Every tick, it looks for a **non-spotted** enemy within 4° of the crosshair (aiming at the chest), 150 to 3000 units away.
+- If neither of them moves it doesn't count: a still crosshair on a still enemy is crosshair placement.
+- If the crosshair follows that same enemy for **1 second**, sweeping **20° or more**, it's a tracking.
+
+**When it flags.** With 3 trackings in the match.
+
+**Why.** The sweep is what matters: holding the crosshair on an angle someone is about to come out of is good placement, not a wallhack. Following someone you can't see across 20° for a second is something else. Under 150 units is dropped because up close you hear and follow people easily, and over 3000 because at that distance any crosshair passes near someone.
+
+**Limits.** "Spotted" is the game's approximation, not the map's exact geometry. Following someone behind a thin wall by their footsteps is legitimate and can look similar. That's why 3 cases are needed.
+
+**How to verify.** Watch each tracking first-person with `spec_show_xray 1`, or with the radar: the crosshair moves with the enemy through the wall.
+
+### Prefire
+
+`pkg/modules/peek.go` · level **suspicious** (PREFIRE)
+
+**What it looks for.** Players who damage an enemy right as they appear, faster than a person can react, over and over. It suggests they already knew where the enemy would show up (wallhack) or a triggerbot.
+
+**Data.** The same "spotted" data as the radar, and the damage of each bullet.
+
+**Computation.**
+- For each fight, it measures from the moment the enemy becomes visible to the player until the first bullet that damages them (2 s at most; later than that isn't a reaction to that appearance).
+- A measurement under **100 ms** is a *prefire*.
+- Measurements during a lag spike are discarded (see [Ping and lag](#ping-and-lag)).
+
+**When it flags.** With at least 15 fights measured, **35% or more** prefires and a median under **150 ms**.
+
+**Why.** A person needs about 200 to 400 ms to see and react. A single prefire happens (pre-firing a known angle is a legal technique), but not in a third of the fights. Calibrated on 13 real demos: it only flagged a player reported as a cheater.
+
+**Limits.** Pre-firing common angles is legitimate and some maps have many. That's why it's only "suspicious" and needs many fights.
+
+**How to verify.** The player page compares their prefire % across all demos with everyone else's: the pattern shows better over several matches. Watch the incidents: do they shoot before the enemy finishes peeking, at spots that aren't typical angles?
+
+### Macro
+
+`pkg/modules/macro.go` · level **cheat** (MACRO)
+
+**What it looks for.** Software or mice with macros that click for the player with a semi-automatic pistol to fire as fast as the weapon allows.
+
+**Data.** Every time the player presses fire (the rising edge of `IN_ATTACK`) and which weapon they hold.
+
+**Computation.**
+- Only pistols that fire once per click: Glock, USP-S, P2000, P250, Desert Eagle, Dual Berettas, Five-SeveN, Tec-9 and R8. The weapon is recognized by type. The CZ75 is left out because it's automatic.
+- The time between consecutive clicks is measured. A pause of more than 500 ms or switching weapons starts a new burst, so the pause between fights doesn't mix in.
+- The deviation of the last 10 intervals of the burst is checked.
+
+**When it flags.** When those 10 intervals have a deviation under **1.5 ms**. One incident per burst, at most one every 5 s.
+
+**Why.** A finger varies naturally: click to click it changes by several milliseconds. A macro clicks at an almost constant rhythm. At 128 tick a tick is 7.8 ms, so a deviation under 1.5 ms over 10 intervals means practically all of them were exactly the same.
+
+**Limits.** Firing with the mouse wheel (`bind mwheeldown +attack`) on free-spinning wheels can be very regular. If a MACRO shows up, check whether the player uses the wheel.
+
+**How to verify.** Watch the burst in slow motion and listen to the rhythm of the shots: with a macro it sounds like a metronome.
+
+### Blind kills
+
+`pkg/modules/flash_smoke.go` · level **suspicious** (ANTI-FLASH)
+
+**What it looks for.** Cheats that remove the flashbang effect.
+
+**Data.** At each firearm kill, how much blindness the killer has left.
+
+**Computation.** A kill with more than 2.5 s of blindness left (fully white screen) counts as a blind kill.
+
+**When it flags.** With 4 blind kills in the match.
+
+**Why.** Fully blind you can kill by chance (spraying where the enemy was), but not 4 times.
+
+**Limits.** Flashes from the side or behind blind less than the game reports in some cases.
+
+**How to verify.** Watch the kill first-person: with anti-flash the player aims precisely with a white screen.
+
+### Kills through smoke
+
+`pkg/modules/flash_smoke.go` · level **suspicious** (SMOKE-VISION)
+
+**What it looks for.** Cheats that let you see through smoke.
+
+**Data.** Active smoke grenades (position, start and end), the killer's eye position and the victim's, and the bullets the killer fired in the round.
+
+**Computation.** A line is drawn between the killer's eyes and the victim. If it crosses an active smoke (a sphere of 144 units radius) and the killer fired 3 bullets or fewer in the round, it's a kill through smoke with few bullets: not a blind spray.
+
+**When it flags.** With 5 such kills in the match.
+
+**Why.** Firing through smoke at footsteps is legitimate, but usually takes many bullets. Killing 5 times with 3 bullets or fewer suggests they could see the enemy.
+
+**Limits.** The smoke is modeled as a sphere, but the real one deforms with the map. An enemy visible at the edge of the smoke can count.
+
+**How to verify.** At the kill, first-person: was the enemy visible? Did the player aim straight at them?
+
+### AFK
+
+`pkg/modules/staff.go` · level **conduct** (AFK/GRIEF)
+
+**What it looks for.** Players who aren't playing.
+
+**Computation.** At the end of each round, how far the player moved since the end of the previous round is measured. Under 50 units is a still round.
+
+**When it flags.** With 3 still rounds in a row.
+
+**Limits.** A player who always holds the same spot and dies quickly may barely move. That's why it's conduct, not cheating.
+
+### Team flashes
+
+`pkg/modules/staff.go` · level **conduct** (TEAMFLASH)
+
+**What it looks for.** Players who blind their own team.
+
+**Computation.** The seconds of blindness each of the player's flashes caused to teammates are added up.
+
+**When it flags.** With 35 seconds or more in the match.
+
+**Why.** Blinding a teammate now and then happens. 35 seconds is systematic.
+
+## Where they hit: the body figure
+
+`pkg/core/hits.go`, `pkg/gui/ui/js/16-body.js`
+
+Every bullet that damages an enemy comes with the body zone it hit (*hit group*): head, neck, chest, stomach, each arm and each leg. SourceSight stores, per player:
+
+- shots fired, hits and damage dealt per zone;
+- the same split by weapon type: rifles, snipers (AWP, SSG 08, autos), pistols, SMGs, shotguns and machine guns;
+- kills and headshot kills.
+
+Only bullets to enemies count: knife, grenades, fire and zeus don't.
+
+**The figure.** An original drawing of a soldier with two outfits (CT with helmet and vest, T with balaclava and pouch vest; **CT / TT** button). Each zone gets more orange the more the player hits it, with its % next to it. The color scale is fixed (45% of hits is already full color), so two figures side by side can be compared at a glance. Arms and legs are the soldier's own, as if facing them: their left arm is on your right.
+
+**Modes.**
+- **Player:** their hits in that demo (player detail) or across all their demos (player page).
+- **General average:** how all the players in your history hit on average.
+- **Comparison:** both figures side by side.
+
+It can be filtered by weapon type. Below there's a table with hits, damage, % and the difference from the average in points. A head difference of 10 points or more is shown in yellow, purely as information. With fewer than 10 hits it warns that the percentages don't mean much yet.
+
+**Accuracy.** Hits divided by shots, **without shotguns**: each pellet that lands counts as a hit, and with shotguns accuracy would go over 100% (in real demos the Nova gave 141%). Pellets do count for the figure, since each one lands on a zone.
+
+**What's normal.** In CS:GO, 10 to 25% of an average player's hits land on the head, most on the chest and stomach. A player who hits the head much more than everyone else **proves nothing**: good players hit the head more. It's something to look at along with the rest.
+
+## Ping and lag
+
+`pkg/core/ping.go`
+
+The demo includes every player's ping (the scoreboard one, which the server updates about once a second). SourceSight samples it once a second **while the player is alive**, to skip the spikes of connecting, loading the map or spectating.
+
+**Does high ping change the detections? No.** Reactions (prefire, triggerbot) are measured between two things that reach the server through the same player's connection: what they saw and when they fired. A steady ping delays both equally and cancels out. A high-ping player doesn't "look faster"; if they react late, they reacted late.
+
+**What does mislead is a lag spike.** During a spike the player's commands arrive bunched and a normal reaction can look impossibly fast. So when the ping is **50 ms or more above that player's usual**, reactions measured at that moment are discarded and counted separately ("Reacciones con lag: N descartadas"). "Usual" is a moving average that doesn't follow spikes, so a long spike doesn't become the new normal.
+
+Across 25 real demos, spikes cover 0.09% of the time players are alive, and none of 17,538 reactions were discarded: the filter is there for the rare case and doesn't change normal results.
+
+Each player's average and peak ping are shown in their detail and page. Ping alone never flags anyone.
+
+## Automatic observations
+
+`pkg/core/notes.go`
+
+When one of a player's numbers stands out, the app writes it as a sentence in a **"Para mirar"** (worth a look) box. For example:
+
+> El 46% de sus impactos fueron a la cabeza (51 de 111); el resto de la partida: 22%.
+> *(46% of their hits went to the head (51 of 111); rest of the match: 22%.)*
+
+**They are informative only: they never change the level or the detections.** They tell you what to look at in the demo.
+
+**What they compare against.** A player is never compared with themselves:
+- in a demo, against **the rest of the match**;
+- on the player page (all their demos), against **the rest of the players in the history**.
+
+**Rules.** Each needs enough data from the player and from the comparison (the comparison needs 3 times the player's minimum), so one lucky round produces nothing.
+
+| What | Minimum | When it shows |
+|---|---|---|
+| Head hits | 20 hits | 30% or more, and 15+ points above the comparison |
+| Accuracy (no shotguns) | 80 shots | 40% or more, and 1.6 times the comparison |
+| Headshot kills | 8 kills | 75% or more, and 25+ points above |
+| Time from crosshair to shot | 8 reactions | 60% or less of the comparison |
+| Damage right as the enemy appears | 10 fights | 20%+ prefires without reaching the detection's 35%, and 2.5 times the comparison |
+| High ping | — | 120 ms average or more |
+| Reactions discarded for lag | — | If any were discarded |
+
+Across 25 real demos, observations show up for 24 of 339 players (7%).
+
+They appear in the player detail, the player page and the Discord bot's message.
+
+## Admins and chat
+
+`pkg/modules/staff.go`, `pkg/modules/chat.go`
+
+**Admin commands.** Punishment commands typed in chat (`!slay`, `/kick`, `sm_ban`…) and SourceMod's server notices (`[SM] Admin: Slayed X.`) are recognized. Logged: slay, slap, kick, ban, burn, freeze, beacon, mute, gag, silence, timebomb, firebomb, freezebomb and drug.
+
+**Revenge.** If an admin punishes (slay, slap, kick, ban, burn, timebomb, firebomb) the player who killed them in the previous **5 seconds**, it's flagged as possible revenge abuse. SourceMod targets by partial name, and SourceSight does the same to find the target.
+
+**Chat.** Every message goes into the report with its round and tick. Flagged:
+- **Toxicity:** severe insults and threats (list in Spanish, English and Portuguese).
+- **Chat ghosting:** a dead player writing positions in all-chat ("están en b", "planted"…).
+- **Spam binds:** the same message 3 times in a row, each within 64 ticks.
+
+Chat doesn't change a player's level: it's information for staff.
+
+## History and duplicate demos
+
+`pkg/history`
+
+Every analyzed demo goes into the history, and reopening it is instant (the stored report opens). The last 300 are kept. You can search by demo, map or player, and filter by level and category.
+
+**Duplicates.** So no match counts twice in the averages:
+- **Same file:** the file's SHA-256 is compared. If it's an exact copy under another name or folder, it asks whether to open the stored one, store it anyway or skip it.
+- **Same match:** a match fingerprint (map, length, rounds and SteamIDs) is compared. Also, if map and rounds match, the length differs by under 2% and 80% of the players are shared, it's considered the same match too (another recording or a trimmed copy). It asks whether to replace the previous one, keep both or discard.
+
+**Re-analyzing.** When a new version changes the detectors, the app shows which demos were analyzed by an older version and offers to re-analyze them all.
+
+## Players: averages across demos
+
+`pkg/history/players.go`
+
+The **Jugadores** tab adds each player (by SteamID) up across all your demos:
+
+- how many demos they appear in, how many they were flagged in and why;
+- every name they used;
+- totals of incidents, blind, smoke and macro kills;
+- **their average against the general average**: bhop perfs, reaction, prefire, head hits, ping, snaps, silent aim and wallhack per demo. Values well above are shown in red;
+- the where-they-hit figure, compared with the average;
+- the observations of their demos added up;
+- the list of their demos, click to open each.
+
+**Search.** By name, SteamID64, Steam profile link, `STEAM_0:X:Y` or `[U:1:N]`.
+
+The **Todas las demos** (all demos) view shows the history totals and how all players hit on average.
+
+## Confirming a cheater
+
+In a player's detail or page, **Confirmar cheater** marks them as confirmed by staff, with an optional note. The app never confirms on its own. It's stored per SteamID, shows in all their demos, and can be removed.
+
+## Watch in game
+
+`pkg/launcher`
+
+Each incident's **Ver** button opens CS:GO at that moment of the demo:
+
+1. If the demo isn't inside the game's `csgo` folder, a *junction* to the demo's folder is created inside `csgo`. Nothing is copied, it works across drives and needs no administrator rights.
+2. If CS:GO is already open and SourceSight started it, the demo is sent through its remote console (`-netconport 2121`). If it's the demo already playing, it just jumps to the tick.
+3. If it isn't open, it's started through Steam (`steam.exe -applaunch <id>`, with the App ID read from Steam's files). It waits for the main menu, loads the demo with `playdemo` and, once the map has loaded, jumps with `demo_gototick`.
+
+It jumps a few seconds before the play (configurable in Settings, 2.5 s by default), converted to ticks with the demo's tickrate.
+
+If CS:GO is open but you started it yourself from Steam, it has no remote console: close it once and press Ver again, or add `-netconport 2121` to its launch options.
+
+Every incident also has its `demo_gototick` command to copy and paste by hand.
+
+## Exporting evidence
+
+- **Exportar evidencia** (in the player detail) creates a printable HTML with the player's data, their incidents with tick and command, and the demo's SHA-256, so another admin can check it's the same file.
+- **Exportar PNG** creates an image of the demo report, the same one the bot posts.
+
+Exports are saved in `Documents\SourceSight`.
 
 ## Discord bot
 
-1. Create an application and a bot in the [Discord developer portal](https://discord.com/developers/applications) and enable *Message Content Intent*.
-2. Run `SourceSightBot.exe` once: it creates `bot_config.json` next to the executable. Paste the token there. **Never share or upload that file.**
-3. Run it again. Upload a demo to the channel and it replies with the report and one button per flagged player.
+`cmd/bot`
 
-## Building
+1. Create an application and a bot in the [Discord developer portal](https://discord.com/developers/applications) and enable *Message Content Intent*.
+2. Run `SourceSightBot.exe` once: it creates `bot_config.json` next to the executable. Paste the token there. **Don't share or commit that file.**
+3. Run it again. Upload a demo to the channel and it replies with the report.
+
+**What it replies.** A message with the result (cheat, suspicious or clean), the flagged players and their level, the observations, the first incidents with their `demo_gototick` command, the report image and a button per flagged player to see their detail.
+
+**Configuration (`bot_config.json`).**
+
+| Field | What it does | Default |
+|---|---|---|
+| `token` | Bot token | — |
+| `prefix` | Help command | `!sourcesight` |
+| `channelIds` | Channels it listens to (empty = all) | all |
+| `maxDemoMB` | Maximum demo size | 250 |
+| `maxParallel` | Demos analyzed at once | 2 |
+
+If more demos arrive than `maxParallel`, the rest wait their turn and the bot says how many are ahead. The bot shares the history and the reoffender database with the app when both run on the same PC and user, and doesn't count a match twice.
+
+## Updates
+
+On startup, the app checks GitHub for a new version and offers to install it with one click. It downloads the installer, verifies it against the SHA-256 that GitHub publishes, updates the app, the command line and the bot, and reopens SourceSight. Only offered on copies installed with the installer.
+
+## Where data is stored
+
+Everything stays on your PC:
+
+| What | Where |
+|---|---|
+| History, reports, reoffenders, confirmations and settings | `%APPDATA%\SourceSight` |
+| Exports (evidence, PNG) | `Documents\SourceSight` |
+| Diagnostic log | `%APPDATA%\SourceSight\sourcesight.log` |
+
+The only internet connection is the update check against GitHub (and Discord, if you use the bot).
+
+## What isn't detected
+
+- **Smooth aimbots**, which turn fast but spread over several ticks: they don't cross the snap threshold.
+- **Discord ghosting:** a dead teammate calling positions over voice is legal on many servers, so firing where the killer was proves nothing. The code exists (`CheckGhosting`) but isn't used.
+- **Exact visibility:** wallhack and prefire use the game's "spotted" data, an approximation, not the map's real geometry.
+- **Backtrack and no-recoil** aren't analyzed yet.
+
+## Building and testing
 
 Requires Go 1.27 or newer.
 
@@ -87,25 +511,39 @@ go build -o SourceSightBot.exe ./cmd/bot
 go test ./...
 ```
 
-Without `-X sourcesight/pkg/version.Version=vX.Y.Z` in `-ldflags` the version is `dev` and update checks are off.
+Without `-X sourcesight/pkg/version.Version=vX.Y.Z` in `-ldflags` the version is `dev` and no update check runs.
 
-`third_party/go-webview2` is a copy of [jchv/go-webview2](https://github.com/jchv/go-webview2) (MIT) with a small patch to receive the real path of files dropped onto the window. See `third_party/go-webview2/SOURCESIGHT_PATCH.md`.
+**Tests.**
+- `go test ./...` runs everything without real demos. Tests use a temporary data folder (`SOURCESIGHT_DATA_DIR`) and refuse to run unless it took effect, so they never touch your history.
+- With real demos: `SOURCESIGHT_TEST_DEMOS=<folder with demos> go test ./pkg/parser ./pkg/gui -run "Parallel|Batch"` checks that parallel analysis gives the same result as one by one, and runs the whole engine with a duplicate demo and a cancel halfway through.
+- CI also runs `go test -race` on Linux to catch state shared between analyses.
 
-The icon is generated with `go run ./tools/icongen`. Release builds embed it with [go-winres](https://github.com/tc-hib/go-winres); the installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) from `installer/SourceSight.iss`.
+**Layout.**
+
+| Folder | Contents |
+|---|---|
+| `cmd/sourcesight` | The app (window) and the command line |
+| `cmd/bot` | The Discord bot |
+| `pkg/parser` | Reading the demo and walking it tick by tick |
+| `pkg/modules` | One file per detector |
+| `pkg/core` | Thresholds, levels, hits, ping, observations |
+| `pkg/history`, `pkg/db` | History, per-player averages and reoffenders |
+| `pkg/gui` | The window; the page is in `pkg/gui/ui` (separate HTML, CSS and JS) |
+| `pkg/launcher` | Watch in game |
+
+`third_party/go-webview2` is a copy of [jchv/go-webview2](https://github.com/jchv/go-webview2) (MIT) with a small patch to receive the real path of files dropped on the window. Details in `third_party/go-webview2/SOURCESIGHT_PATCH.md`.
+
+The icon is generated with `go run ./tools/icongen`. Releases embed it in the `.exe` files with [go-winres](https://github.com/tc-hib/go-winres), and the installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) from `installer/SourceSight.iss`.
 
 ## Releasing
 
 ```
-git tag v2.1.0
-git push origin v2.1.0
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
-GitHub Actions builds the installer and the standalone bot and publishes the release. Installed copies see it next time they open.
-
-## How it works
-
-See [docs/how-it-works.md](docs/how-it-works.md).
+GitHub Actions builds the installer and the standalone bot and publishes the release. Installed copies see it the next time they open.
 
 ## License
 
-[MIT with the Commons Clause](LICENSE): you can use, modify and share SourceSight freely, including on servers that charge for VIP or skins. You **can't sell it** or charge for a product or service based on it.
+[MIT with the Commons Clause](LICENSE): you can use, modify and share SourceSight freely, including on servers that charge for VIP or skins. What you **can't do is sell it** or charge for a product or service based on it.
