@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SourceSight</title>
+    <style>
+/* @styles */
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="1" y="1" width="22" height="22" rx="5" fill="#1b1c1f" stroke="#2e3035"/>
+                <g fill="none" stroke="#ecebe6" stroke-width="1.7" stroke-linecap="round">
+                    <path d="M12 4.6v3.2M12 16.2v3.2M4.6 12h3.2M16.2 12h3.2"/>
+                    <path d="M14.9 6.9a6 6 0 0 1 2.2 2.2M17.1 14.9a6 6 0 0 1-2.2 2.2M9.1 17.1a6 6 0 0 1-2.2-2.2M6.9 9.1a6 6 0 0 1 2.2-2.2"/>
+                </g>
+                <circle cx="12" cy="12" r="1.8" fill="#e07b2a"/>
+            </svg>
+            <span class="brand-name">SourceSight</span>
+            <span class="brand-ver" id="appVersion"></span>
+        </div>
+
+        <div class="demo-meta" id="demoMeta"></div>
+
+        <div class="actions">
+            <button class="btn" id="btnReanalyze" style="display:none;" onclick="reanalyze()" title="Volver a analizar esta demo">
+                <i data-icon="refresh"></i><span class="btn-label">Re-analizar</span>
+            </button>
+            <button class="btn" id="btnPNG" style="display:none;" onclick="window.exportPNGReport()" title="Guardar el reporte como imagen">
+                <i data-icon="image"></i><span class="btn-label">PNG</span>
+            </button>
+            <button class="btn" id="btnSummary" style="display:none;" onclick="copyStaffSummary()" title="Copiar resumen en Markdown para Discord">
+                <i data-icon="copy"></i><span class="btn-label">Resumen</span>
+            </button>
+            <button class="btn btn-primary" onclick="pickDemos()">
+                <i data-icon="folder"></i><span class="btn-label">Abrir demos</span>
+            </button>
+            <button class="btn btn-plain btn-icon" onclick="openSettings()" title="Configuración">
+                <i data-icon="settings"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="update-bar" id="updateBar">
+        <span class="grow" id="updateText"></span>
+        <a class="link" id="updateNotes" onclick="openUpdatePage()">Ver cambios</a>
+        <button class="btn btn-primary" id="updateApply" onclick="startUpdate()">Actualizar</button>
+        <button class="btn btn-plain btn-icon" onclick="dismissUpdate()" title="Ahora no"><i data-icon="x"></i></button>
+    </div>
+
+    <div class="layout">
+        <aside id="aside">
+            <div class="aside-resizer" id="asideResizer" role="separator" aria-orientation="vertical" aria-label="Ancho del panel" tabindex="0" title="Arrastrá para cambiar el ancho (doble click: volver al normal)"></div>
+            <div class="aside-tabs" role="tablist">
+                <button class="on" id="tabDemos" role="tab" onclick="setAsideTab('demos')">Demos <span class="num" id="histCount"></span></button>
+                <button id="tabPlayers" role="tab" onclick="setAsideTab('players')">Jugadores</button>
+            </div>
+
+            <div class="aside-pane" id="paneDemos">
+                <div class="aside-search">
+                    <input class="input" id="histSearch" placeholder="Buscar demo, mapa o jugador" oninput="renderHistory()">
+                    <div class="seg seg-full" id="histFilter">
+                        <button class="on" onclick="setHistFilter('all', this)">Todas</button>
+                        <button onclick="setHistFilter('cheat', this)">Cheat</button>
+                        <button onclick="setHistFilter('suspect', this)">Sospechosas</button>
+                        <button onclick="setHistFilter('clean', this)">Limpias</button>
+                    </div>
+                    <select class="input" id="histCategory" onchange="renderHistory()" aria-label="Categoría">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                    <div class="aside-notice" id="outdatedNotice" style="display:none;">
+                        <span id="outdatedText"></span>
+                        <button class="btn" onclick="runReanalyzeOutdated()">Re-analizar</button>
+                    </div>
+                </div>
+                <div class="hist-list" id="histList"></div>
+            </div>
+
+            <div class="aside-pane" id="panePlayers" style="display:none;">
+                <div class="aside-search">
+                    <input class="input" id="playerSearch" placeholder="Nombre, SteamID o link de perfil" oninput="searchPlayers()">
+                    <div class="aside-hint" id="playerHint"></div>
+                </div>
+                <div class="hist-list" id="playerList"></div>
+            </div>
+        </aside>
+
+        <main id="main">
+            <div class="content">
+
+                <div class="dropzone" id="dropzone" onclick="pickDemos()">
+                    <i data-icon="upload"></i>
+                    <div class="dropzone-title">Soltá una demo acá</div>
+                    <div class="dropzone-sub">También podés soltar varias o una carpeta entera, o hacer click para buscarlas. Todo se analiza en tu PC.</div>
+                </div>
+
+                <div class="loading" id="loadingState">
+                    <div class="loading-text" id="loadingText">Abriendo demo...</div>
+                    <div class="progress"><div class="progress-bar" id="loadingBar"></div></div>
+                </div>
+
+                <div id="overviewView" style="display:none; flex-direction:column; gap:16px;"></div>
+                <div id="playerView" style="display:none; flex-direction:column; gap:16px;"></div>
+
+                <div id="auditContent" style="display:none; flex-direction:column; gap:16px;">
+
+                    <div class="notice" id="cacheNotice">
+                        <i data-icon="history"></i>
+                        <span class="grow" id="cacheNoticeText">Esta demo ya estaba analizada; se abrió el resultado guardado.</span>
+                        <button class="btn" onclick="reanalyze()">Re-analizar</button>
+                    </div>
+
+                    <div class="summary">
+                        <div class="sum-cell">
+                            <div class="sum-label">Jugadores</div>
+                            <div class="sum-value" id="sumPlayers">0</div>
+                            <div class="sum-sub" id="sumPlayersSub"></div>
+                        </div>
+                        <div class="sum-cell">
+                            <div class="sum-label">Cheats</div>
+                            <div class="sum-value" id="sumFlags">0</div>
+                            <div class="sum-sub" id="sumFlagsSub"></div>
+                        </div>
+                        <div class="sum-cell">
+                            <div class="sum-label">Duración</div>
+                            <div class="sum-value" id="sumDuration">0</div>
+                            <div class="sum-sub" id="sumDurationSub"></div>
+                        </div>
+                        <div class="sum-cell">
+                            <div class="sum-label">Reincidentes</div>
+                            <div class="sum-value" id="sumReo">0</div>
+                            <div class="sum-sub" id="sumReoSub"></div>
+                        </div>
+                    </div>
+
+                    <section class="panel" id="playersCard">
+                        <div class="panel-head">
+                            <div class="panel-title">Jugadores <span class="count" id="playersCount"></span></div>
+                            <div class="panel-tools">
+                                <input class="input" id="searchPlayer" placeholder="Buscar jugador" oninput="renderPlayers()">
+                                <div class="seg" id="playerFilter">
+                                    <button class="on" onclick="setPlayerFilter('all', this)">Todos</button>
+                                    <button onclick="setPlayerFilter('cheat', this)">Cheat</button>
+                                    <button onclick="setPlayerFilter('suspect', this)">Sospechosos</button>
+                                    <button onclick="setPlayerFilter('clean', this)">Limpios</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="sortable" data-key="name" onclick="sortPlayers('name')">Jugador</th>
+                                        <th class="sortable r" data-key="totalJumps" onclick="sortPlayers('totalJumps')">Saltos</th>
+                                        <th class="sortable r" data-key="perfRatio" onclick="sortPlayers('perfRatio')">Perfs</th>
+                                        <th class="sortable r" data-key="oneTickRatio" onclick="sortPlayers('oneTickRatio')">1 tick</th>
+                                        <th class="sortable r" data-key="maxStreak" onclick="sortPlayers('maxStreak')">Racha</th>
+                                        <th class="sortable r" data-key="snapCount" onclick="sortPlayers('snapCount')">Snaps</th>
+                                        <th class="sortable r" data-key="maxSpeed" onclick="sortPlayers('maxSpeed')">Vel. máx</th>
+                                        <th class="r">Resultado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="playersBody"></tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section class="panel" id="detectCard">
+                        <div class="panel-head">
+                            <div class="panel-title">Detecciones</div>
+                            <span class="muted">Triggerbot, aim, prefire, macro, flash y humo, wallhack</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Jugador</th>
+                                        <th class="r">Reacción</th>
+                                        <th class="r">Snaps / silent</th>
+                                        <th class="r">Macro</th>
+                                        <th class="r">Cegado / humo</th>
+                                        <th class="r">Wallhack</th>
+                                        <th class="r" title="Peleas donde hizo daño a menos de 100 ms de que el rival quedara a la vista">Prefire</th>
+                                        <th class="r">Resultado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detectBody"></tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section class="panel" id="timelineCard">
+                        <div class="panel-head">
+                            <div class="panel-title">Incidentes <span class="count" id="timelineCount"></span></div>
+                            <span class="muted">El comando ya incluye unos segundos antes de la jugada</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="r">Ronda</th>
+                                        <th>Tipo</th>
+                                        <th>Jugador</th>
+                                        <th>Comando</th>
+                                        <th></th>
+                                        <th>Detalle</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="timelineBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="more" id="timelineMore" style="display:none;">
+                            <button class="btn btn-plain" onclick="showMoreTimeline()">Mostrar 25 más</button>
+                        </div>
+                    </section>
+
+                    <section class="panel" id="adminCard">
+                        <div class="panel-head">
+                            <div class="panel-title">Comandos de admins <span class="count" id="adminCount"></span></div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="r">Ronda</th>
+                                        <th>Admin</th>
+                                        <th>Comando</th>
+                                        <th>Objetivo</th>
+                                        <th>Contexto</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminBody"></tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section class="panel" id="chatCard">
+                        <div class="panel-head">
+                            <div class="panel-title">Chat <span class="count" id="chatCount"></span></div>
+                            <div class="seg" id="chatFilter">
+                                <button class="on" onclick="setChatFilter('all', this)">Todo</button>
+                                <button onclick="setChatFilter('toxic', this)">Tóxico</button>
+                                <button onclick="setChatFilter('ghosting', this)">Ghosting</button>
+                                <button onclick="setChatFilter('spam', this)">Spam</button>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="r">Ronda</th>
+                                        <th>Jugador</th>
+                                        <th>Canal</th>
+                                        <th>Mensaje</th>
+                                        <th>Tipo</th>
+                                        <th>Tick</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="chatBody"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Player detail -->
+    <div class="overlay" id="playerModal" onclick="closePlayer()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-head">
+                <div style="min-width:0;">
+                    <div class="modal-title" id="pmName"></div>
+                    <div class="modal-sub mono" id="pmSub"></div>
+                </div>
+                <div class="modal-actions" id="pmActions"></div>
+            </div>
+            <div class="modal-body" id="pmBody"></div>
+        </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="overlay" id="settingsModal" onclick="closeSettings()">
+        <div class="modal" style="width:600px;" onclick="event.stopPropagation()">
+            <div class="modal-head">
+                <div class="modal-title">Configuración</div>
+                <button class="btn btn-plain btn-icon" onclick="closeSettings()" title="Cerrar"><i data-icon="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label for="cfgCSGOPath">Carpeta de CS:GO</label>
+                    <div style="display:flex; gap:6px;">
+                        <input class="input mono" id="cfgCSGOPath" placeholder="C:\Program Files (x86)\Steam\steamapps\common\csgo legacy\csgo">
+                        <button class="btn" onclick="browseCSGO()">Buscar</button>
+                    </div>
+                    <div class="help">Se usa para abrir cada incidente directamente en el juego.</div>
+                </div>
+
+                <div class="field">
+                    <label for="cfgPreroll">Segundos antes de la jugada</label>
+                    <select class="input" id="cfgPreroll">
+                        <option value="1.5">1,5 s</option>
+                        <option value="2.5" selected>2,5 s</option>
+                        <option value="4.0">4 s</option>
+                        <option value="6.0">6 s</option>
+                    </select>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:6px;">
+                    <button class="btn" onclick="closeSettings()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="saveSettings()">Guardar</button>
+                </div>
+
+                <div class="divider"></div>
+
+                <div>
+                    <div class="block-title">Umbrales de detección</div>
+                    <dl class="kv">
+                        <dt>Autobunny</dt><dd>75% de perfs o más en al menos 10 saltos. Con 30 saltos o más, 55% o 5 perfs seguidos queda como sospechoso</dd>
+                        <dt>Triggerbot</dt><dd>reacción media menor a 80 ms con desvío menor a 15 ms</dd>
+                        <dt>Aimlock / spinbot</dt><dd>Giros de más de 45° en un tick, varios dentro de 1 segundo: 50 o más en la partida es cheat, de 10 a 49 es sospechoso</dd>
+                        <dt>Wallhack</dt><dd>seguir con la mira a un enemigo oculto durante 1 s y 20° de recorrido, 3 veces</dd>
+                        <dt>Silent aim</dt><dd>3 impactos con más de 35° de diferencia entre la mira y el daño</dd>
+                    </dl>
+                </div>
+
+                <div class="divider"></div>
+
+                <div>
+                    <div class="block-title">Acerca de</div>
+                    <dl class="kv">
+                        <dt>Versión</dt><dd id="aboutVersion"></dd>
+                        <dt>Código fuente</dt><dd><a class="link" id="aboutRepo" onclick="openRepo()"></a></dd>
+                        <dt>Exportaciones</dt><dd><a class="link" onclick="window.openExportFolder()">Documentos\SourceSight</a></dd>
+                    </dl>
+                    <div style="margin-top:10px;">
+                        <button class="btn" onclick="checkUpdates(true)"><i data-icon="refresh"></i>Buscar actualizaciones</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Question from Go (duplicate demos) -->
+    <div class="overlay" id="promptModal">
+        <div class="modal" style="width:520px;" role="dialog" aria-labelledby="promptTitle">
+            <div class="modal-head">
+                <div class="modal-title" id="promptTitle"></div>
+            </div>
+            <div class="modal-body">
+                <div class="prompt-text" id="promptText"></div>
+                <div class="prompt-actions" id="promptActions"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+/* @scripts */
+    </script>
+</body>
+</html>

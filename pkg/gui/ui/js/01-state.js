@@ -1,0 +1,10 @@
+let currentReport = null;
+let currentMeta = null;
+let historyItems = [];
+let playerFilter = 'all';
+let chatFilter = 'all';
+let sortKey = 'perfRatio';
+let sortAsc = false;
+let timelineShown = 25;
+let updateInfo = null;
+let appInfo = { version: '', repoUrl: '' };
