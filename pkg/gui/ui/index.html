@@ -271,6 +271,35 @@
                         </div>
                     </section>
 
+                    <!-- Walking near unseen enemies (js/17-shift.js) -->
+                    <section class="panel" id="shiftCard">
+                        <div class="panel-head">
+                            <div class="panel-title">Registro de SHIFT <span class="count" id="shiftCount"></span></div>
+                            <select class="input" id="shiftPlayer" onchange="setShiftPlayer(this.value)" aria-label="Jugador" style="width:auto;"></select>
+                        </div>
+                        <div class="panel-note muted" id="shiftNote"></div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="r">Ronda</th>
+                                        <th>Jugador</th>
+                                        <th>Enemigos cerca sin ver</th>
+                                        <th class="r">Apretadas</th>
+                                        <th class="r">Con shift</th>
+                                        <th class="r">Más cerca</th>
+                                        <th>Comando</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="shiftBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="more" id="shiftMore" style="display:none;">
+                            <button class="btn btn-plain" onclick="showMoreShift()">Mostrar 25 más</button>
+                        </div>
+                    </section>
+
                     <section class="panel" id="chatCard">
                         <div class="panel-head">
                             <div class="panel-title">Chat <span class="count" id="chatCount"></span></div>
@@ -342,6 +371,18 @@
                         <option value="4.0">4 s</option>
                         <option value="6.0">6 s</option>
                     </select>
+                </div>
+
+                <div class="field">
+                    <label for="cfgShiftRadius">Registro de SHIFT: distancia del enemigo</label>
+                    <select class="input" id="cfgShiftRadius">
+                        <option value="500">500 unidades</option>
+                        <option value="750">750 unidades</option>
+                        <option value="1000" selected>1000 unidades (recomendado)</option>
+                        <option value="1500">1500 unidades</option>
+                        <option value="2000">2000 unidades</option>
+                    </select>
+                    <div class="help">Un enemigo que no se ve a esta distancia o menos cuenta como cerca. Se aplica a las demos que analices o re-analices después de cambiarlo.</div>
                 </div>
 
                 <div style="display:flex; justify-content:flex-end; gap:6px;">

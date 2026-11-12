@@ -32,6 +32,7 @@ Funciona en Windows, todo en tu PC. No se sube nada a ningún lado.
 - [Dónde pega: la figura del cuerpo](#dónde-pega-la-figura-del-cuerpo)
 - [Ping y lag](#ping-y-lag)
 - [Observaciones automáticas](#observaciones-automáticas)
+- [Registro de SHIFT](#registro-de-shift)
 - [Admins y chat](#admins-y-chat)
 - [Historial y demos repetidas](#historial-y-demos-repetidas)
 - [Jugadores: promedios entre demos](#jugadores-promedios-entre-demos)
@@ -383,6 +384,34 @@ En 25 demos reales aparecen observaciones en 24 de 339 jugadores (7 %).
 
 Se muestran en el detalle del jugador, en su ficha y en el mensaje del bot de Discord.
 
+## Registro de SHIFT
+
+`pkg/core/shift.go`, `pkg/gui/ui/js/17-shift.js`
+
+**Qué es.** Una lista de cada momento en que un jugador caminó con shift (`+speed`, caminar sin hacer ruido) teniendo cerca un enemigo que no veía. Caminar en silencio es como uno se acerca sin ser escuchado, así que hacerlo justo al lado de un enemigo que "no sabe" que está ahí vale la pena mirarlo. Pero también es juego completamente normal, por eso el registro **no cambia el nivel ni las detecciones**: es una lista para revisar, sin otro criterio que la distancia y la visibilidad.
+
+**Datos.** En cada tick: si el jugador tiene apretado shift (el botón `IN_SPEED`), la distancia a cada enemigo vivo y si lo está viendo (el mismo dato de "visto" que usa el radar).
+
+**Cálculo.**
+- Un caso empieza cuando el jugador camina con shift y hay al menos un enemigo **que no ve** a **1000 unidades o menos** (más o menos la distancia a la que se escuchan los pasos corriendo).
+- Mientras ese enemigo (o cualquier otro que no ve) siga cerca, todo va al **mismo caso**: cada vez que vuelve a apretar shift se suma como una apretada más, no como un caso nuevo.
+- El caso se cierra cuando pasa 1 segundo sin ningún enemigo cerca, cuando el jugador muere o cuando termina la ronda.
+- No cuenta el calentamiento ni el congelamiento del inicio de cada ronda.
+- Si la demo no trae el dato de visibilidad para un enemigo, se lo toma como visto: nunca agrega un caso por falta de datos.
+
+**Qué muestra cada caso.** Ronda, jugador, los enemigos cerca que no veía, cuántas veces apretó shift, cuánto tiempo caminó con shift, lo más cerca que estuvo un enemigo, el comando `demo_gototick` y el botón **Ver**.
+
+**Dónde está.**
+- En el reporte de la demo, la sección **"Registro de SHIFT"**, con un filtro por jugador (ordenado por cantidad de casos). Muestra 25 y se pueden pedir más.
+- En el detalle de un jugador, un recuadro con cuántos casos tuvo y el botón **Ver en el registro**, que abre la lista filtrada por él.
+- El bot de Discord muestra un resumen: cuántos casos hubo y los jugadores con más.
+
+**Distancia.** Se cambia en **Configuración** (500, 750, 1000, 1500 o 2000 unidades) y en el bot con `shiftRadius` en `bot_config.json`. Se aplica a las demos que analices o re-analices después de cambiarla.
+
+**Qué esperar.** En partidas normales hay muchos casos: en 25 demos reales salieron de decenas a unos 300 por partida, y hasta unos 45 por jugador. Lo que conviene mirar es el jugador que camina con shift **directo hacia** un enemigo que no ve, una y otra vez, o que se frena justo detrás de una pared donde hay alguien.
+
+**Límites.** El dato de "visto" es la aproximación del juego, no la geometría exacta. Y el registro no distingue si el jugador camina porque escuchó al rival, porque es la jugada del equipo o porque sabe dónde está: eso solo se ve mirando la demo.
+
 ## Admins y chat
 
 `pkg/modules/staff.go`, `pkg/modules/chat.go`
@@ -394,7 +423,7 @@ Se muestran en el detalle del jugador, en su ficha y en el mensaje del bot de Di
 **Chat.** Cada mensaje queda en el reporte con su ronda y su tick. Se marcan:
 - **Toxicidad:** insultos graves y amenazas (lista en castellano, inglés y portugués).
 - **Ghosting por chat:** un jugador muerto que escribe posiciones en el chat general ("están en b", "planted"…).
-- **Binds de spam:** el mismo mensaje 3 veces seguidas, cada una en menos de 64 ticks.
+- **Binds de spam:** el mismo mensaje 3 veces seguidas, cada una a menos de 1 segundo de la anterior.
 
 El chat no cambia el nivel del jugador: es información para el staff.
 

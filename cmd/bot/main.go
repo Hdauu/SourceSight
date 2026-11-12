@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,6 +32,8 @@ type BotConfig struct {
 	MaxDemoMB  int64    `json:"maxDemoMB"`
 	// MaxParallel is how many demos are analyzed at once (default 2).
 	MaxParallel int `json:"maxParallel,omitempty"`
+	// ShiftRadius: SHIFT log distance in units (default 1000).
+	ShiftRadius float64 `json:"shiftRadius,omitempty"`
 }
 
 // slots limits how many demos are analyzed at once; queued counts demos waiting or
@@ -192,7 +195,7 @@ func main() {
 
 		// Parse
 		start := time.Now()
-		rep, err := parser.ParseDemo(tempDem, parser.ParserOptions{Verbose: false})
+		rep, err := parser.ParseDemo(tempDem, parser.ParserOptions{ShiftRadius: cfg.ShiftRadius})
 		if err != nil {
 			_, _ = s.ChannelMessageEdit(m.ChannelID, statusMsg.ID, fmt.Sprintf("No se pudo analizar la demo: %v", err))
 			return
@@ -281,6 +284,9 @@ func main() {
 		}
 		if notes := notesField(rep); notes != "" {
 			fields = append(fields, &discordgo.MessageEmbedField{Name: "Para mirar (informativo)", Value: notes, Inline: false})
+		}
+		if n := len(rep.ShiftLog); n > 0 {
+			fields = append(fields, &discordgo.MessageEmbedField{Name: "Registro de SHIFT (informativo)", Value: shiftSummary(rep), Inline: false})
 		}
 		fields = append(fields, &discordgo.MessageEmbedField{Name: "Timeline (pegar en CS:GO)", Value: tlStr, Inline: false})
 
@@ -383,4 +389,32 @@ func saveToHistory(rep *core.DemoReport, demPath string) string {
 	}
 	db.GetDatabase().RecordReport(rep)
 	return ""
+}
+
+// shiftSummary lists who walked near unseen enemies the most (informative, see
+// core/shift.go); the full log with every case is in the app.
+func shiftSummary(rep *core.DemoReport) string {
+	per := map[string]int{}
+	for _, c := range rep.ShiftLog {
+		per[c.Player]++
+	}
+	names := make([]string, 0, len(per))
+	for n := range per {
+		names = append(names, n)
+	}
+	sort.Slice(names, func(i, j int) bool {
+		if per[names[i]] != per[names[j]] {
+			return per[names[i]] > per[names[j]]
+		}
+		return names[i] < names[j]
+	})
+	out := fmt.Sprintf("%d momentos caminando con shift cerca de un enemigo sin verlo.", len(rep.ShiftLog))
+	for i, n := range names {
+		if i == 5 {
+			out += fmt.Sprintf("\n… y %d jugadores más (detalle en la app)", len(names)-i)
+			break
+		}
+		out += fmt.Sprintf("\n• **%s**: %d", n, per[n])
+	}
+	return out
 }

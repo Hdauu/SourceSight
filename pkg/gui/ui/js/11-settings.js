@@ -6,6 +6,7 @@ function openSettings() {
                 const cfg = JSON.parse(s);
                 if (cfg.csgoPath) document.getElementById('cfgCSGOPath').value = cfg.csgoPath;
                 if (cfg.prerollSeconds) document.getElementById('cfgPreroll').value = cfg.prerollSeconds.toFixed(1);
+                document.getElementById('cfgShiftRadius').value = String(cfg.shiftRadius || 1000);
             } catch (e) {}
         });
     }
@@ -22,8 +23,9 @@ function browseCSGO() {
 function saveSettings() {
     const p = document.getElementById('cfgCSGOPath').value.trim();
     const preroll = parseFloat(document.getElementById('cfgPreroll').value) || 2.5;
+    const shiftRadius = parseFloat(document.getElementById('cfgShiftRadius').value) || 1000;
     if (!window.saveConfig) { closeSettings(); return; }
-    window.saveConfig(p, preroll)
+    window.saveConfig(p, preroll, shiftRadius)
         .then(saved => {
             if (saved) document.getElementById('cfgCSGOPath').value = saved;
             showToast(saved ? 'Guardado. Carpeta del juego: ' + saved : 'Configuración guardada');

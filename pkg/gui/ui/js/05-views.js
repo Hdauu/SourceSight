@@ -107,6 +107,9 @@ function loadDemoReport(report, meta) {
     renderTimeline();
     renderAdmin();
     renderChat();
+    shiftPlayer = '';
+    shiftShown = 25;
+    renderShift();
     renderHistory();
     document.getElementById('main').scrollTop = 0;
 }

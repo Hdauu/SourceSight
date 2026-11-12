@@ -34,6 +34,7 @@ The app itself is in Spanish; this document describes it in English.
 - [Where they hit: the body figure](#where-they-hit-the-body-figure)
 - [Ping and lag](#ping-and-lag)
 - [Automatic observations](#automatic-observations)
+- [SHIFT log](#shift-log)
 - [Admins and chat](#admins-and-chat)
 - [History and duplicate demos](#history-and-duplicate-demos)
 - [Players: averages across demos](#players-averages-across-demos)
@@ -386,6 +387,34 @@ Across 25 real demos, observations show up for 24 of 339 players (7%).
 
 They appear in the player detail, the player page and the Discord bot's message.
 
+## SHIFT log
+
+`pkg/core/shift.go`, `pkg/gui/ui/js/17-shift.js`
+
+**What it is.** A list of every moment a player walked with shift (`+speed`, walking silently) with an enemy they couldn't see close by. Walking silently is how you sneak up without being heard, so doing it right next to an enemy you supposedly don't know is there is worth a look. It's also completely normal play, so the log **never changes the level or the detections**: it's a list to review, with no criteria other than distance and visibility.
+
+**Data.** Every tick: whether the player holds shift (the `IN_SPEED` button), the distance to each living enemy and whether they can see them (the same "spotted" data the radar uses).
+
+**Computation.**
+- A case starts when the player walks with shift and there's at least one enemy **they can't see** within **1000 units** (roughly the distance at which running footsteps are heard).
+- While that enemy (or any other unseen one) stays close, everything goes into the **same case**: every new shift press counts as one more press, not as a new case.
+- The case closes after 1 second with no enemy close, when the player dies or when the round ends.
+- Warmup and the freeze at the start of each round don't count.
+- If the demo lacks visibility data for an enemy, they count as seen: a case is never added for lack of data.
+
+**What each case shows.** Round, player, the close enemies they couldn't see, how many times they pressed shift, how long they walked, the closest an enemy got, the `demo_gototick` command and the **Ver** (watch) button.
+
+**Where it is.**
+- In the demo report, the **"Registro de SHIFT"** section, with a player filter (sorted by number of cases). It shows 25 and more can be loaded.
+- In a player's detail, a box with how many cases they had and a **Ver en el registro** button that opens the list filtered to them.
+- The Discord bot shows a summary: how many cases and the players with the most.
+
+**Distance.** Changed in **Settings** (500, 750, 1000, 1500 or 2000 units) and in the bot with `shiftRadius` in `bot_config.json`. It applies to demos analyzed or re-analyzed after changing it.
+
+**What to expect.** Normal matches have many cases: across 25 real demos there were from a few dozen to about 300 per match, and up to about 45 per player. What's worth watching is a player who walks with shift **straight toward** an enemy they can't see, again and again, or stops right behind a wall where someone is.
+
+**Limits.** "Spotted" is the game's approximation, not exact geometry. And the log can't tell whether the player walks because they heard the enemy, because it's the team's play or because they know where the enemy is: only watching the demo shows that.
+
 ## Admins and chat
 
 `pkg/modules/staff.go`, `pkg/modules/chat.go`
@@ -397,7 +426,7 @@ They appear in the player detail, the player page and the Discord bot's message.
 **Chat.** Every message goes into the report with its round and tick. Flagged:
 - **Toxicity:** severe insults and threats (list in Spanish, English and Portuguese).
 - **Chat ghosting:** a dead player writing positions in all-chat ("están en b", "planted"…).
-- **Spam binds:** the same message 3 times in a row, each within 64 ticks.
+- **Spam binds:** the same message 3 times in a row, each less than 1 second after the previous one.
 
 Chat doesn't change a player's level: it's information for staff.
 

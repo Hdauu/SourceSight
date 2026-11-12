@@ -36,6 +36,10 @@ function openPlayer(p) {
         '</div>';
     if (hasSteam) html += '<div>' + confirmBlock(sid, p.name, levelOf(p)) + '</div>';
     html += notesBlock(p.notes);
+    if (p.shiftCases) {
+        html += '<div class="callout"><span class="grow">Caminó con shift cerca de un enemigo que no veía en ' + p.shiftCases + (p.shiftCases === 1 ? ' momento' : ' momentos') + ' de la partida.</span>' +
+            '<button class="btn" onclick="showShiftOf(\'' + sid + '\')">Ver en el registro</button></div>';
+    }
 
     html += '<div><div class="block-title">Métricas</div><div class="stats">' +
         stat('Saltos', p.totalJumps) +

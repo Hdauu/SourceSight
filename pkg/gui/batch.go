@@ -12,6 +12,7 @@ import (
 	"sourcesight/pkg/core"
 	"sourcesight/pkg/db"
 	"sourcesight/pkg/history"
+	"sourcesight/pkg/launcher"
 	"sourcesight/pkg/parser"
 )
 
@@ -64,13 +65,14 @@ type batchInfo struct {
 }
 
 type batch struct {
-	mu       sync.Mutex
-	rows     []batchRow
-	dirty    bool
-	started  time.Time
-	workers  int
-	cancel   chan struct{}
-	canceled atomic.Bool
+	mu          sync.Mutex
+	rows        []batchRow
+	dirty       bool
+	started     time.Time
+	workers     int
+	cancel      chan struct{}
+	shiftRadius float64 // from the settings, read once per batch
+	canceled    atomic.Bool
 }
 
 func (b *batch) update(i int, f func(r *batchRow)) {
@@ -145,7 +147,7 @@ func (a *app) processQueue(paths []string, force bool) {
 	}
 	defer busy.Store(false)
 
-	b := &batch{started: time.Now(), cancel: make(chan struct{}), workers: workerCount(len(paths))}
+	b := &batch{started: time.Now(), cancel: make(chan struct{}), workers: workerCount(len(paths)), shiftRadius: launcher.LoadConfig().ShiftRadius}
 	for i, p := range paths {
 		b.rows = append(b.rows, batchRow{ID: i, Name: filepath.Base(p), State: stQueued})
 	}
@@ -300,7 +302,8 @@ func (a *app) parseOne(b *batch, i int, path string, force bool) (res parsed) {
 
 	b.update(i, func(r *batchRow) { r.State = stParsing })
 	res.rep, res.err = parser.ParseDemo(path, parser.ParserOptions{
-		Cancel: b.cancel,
+		Cancel:      b.cancel,
+		ShiftRadius: b.shiftRadius,
 		OnProgress: func(f float64) {
 			b.update(i, func(r *batchRow) { r.Pct = min(99, int(f*100)) })
 		},

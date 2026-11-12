@@ -13,6 +13,7 @@ type AppConfig struct {
 	CSGOPath       string  `json:"csgoPath"`               // Path to 'csgo' directory or game root
 	PrerollSeconds float64 `json:"prerollSeconds"`         // Seconds to rewind before incident
 	SidebarWidth   int     `json:"sidebarWidth,omitempty"` // px; 0 = default
+	ShiftRadius    float64 `json:"shiftRadius,omitempty"`  // SHIFT log: units at which an unseen enemy is close; 0 = default
 }
 
 var cfgLock sync.Mutex

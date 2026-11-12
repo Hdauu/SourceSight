@@ -132,6 +132,7 @@ type PlayerState struct {
 	Peek       PeekData
 	Hits       HitProfile
 	Ping       PingData
+	Shift      ShiftData
 }
 
 func NewPlayerState(name string, steamID uint64) *PlayerState {
@@ -180,7 +181,8 @@ type PlayerStats struct {
 	PingAvg             int                `json:"pingAvg,omitempty"`
 	PingMax             int                `json:"pingMax,omitempty"`
 	Hits                *HitProfile        `json:"hits,omitempty"`
-	Notes               []string           `json:"notes,omitempty"` // informative only, see notes.go
+	Notes               []string           `json:"notes,omitempty"`      // informative only, see notes.go
+	ShiftCases          int                `json:"shiftCases,omitempty"` // SHIFT log entries (informative, see shift.go)
 	PreviousInfractions int                `json:"previousInfractions"`
 	PreviousNames       []string           `json:"previousNames"`
 	ChatMessages        []ChatMessageEntry `json:"chatMessages"`
@@ -374,6 +376,7 @@ func (ps *PlayerState) ComputeStats(tickrate int) PlayerStats {
 		PingAvg:         ps.Ping.Average(),
 		PingMax:         ps.Ping.Max,
 		Hits:            hitsOrNil(&ps.Hits),
+		ShiftCases:      len(ps.Shift.Cases),
 		IsAfk:           isAfk,
 		Flags:           flags,
 		Verdict:         verdict,
@@ -411,6 +414,7 @@ type DemoReport struct {
 	Header   DemoHeader         `json:"header"`
 	Players  []PlayerStats      `json:"players"`
 	AdminLog []AdminEvent       `json:"adminLog"`
+	ShiftLog []ShiftCase        `json:"shiftLog"` // walking near unseen enemies, see shift.go (null: none; missing: older analysis)
 	ChatLog  []ChatMessageEntry `json:"chatLog"`
 	Timeline []TimelineIncident `json:"timeline"`
 }

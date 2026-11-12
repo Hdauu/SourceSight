@@ -83,4 +83,5 @@ func KnownFlags() []string {
 //	   macro measured per burst on every semi-auto pistol; smoke kills only through a smoke
 //	   that exists (18 s, same round) and lies between killer and victim, bullets per
 //	   round, wallhack and revenge windows scaled to the demo tickrate
-const AnalysisVersion = 4
+//	5: SHIFT log (walking near unseen enemies); chat spam window scaled to the tickrate
+const AnalysisVersion = 5

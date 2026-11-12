@@ -470,7 +470,7 @@ func LaunchApp(initialDemoPath string) error {
 
 	// saveConfig returns the game folder actually stored (csgo.exe paths become the
 	// "csgo" folder demos are copied into), or an error if it isn't a CS:GO install.
-	_ = w.Bind("saveConfig", func(path string, preroll float64) (string, error) {
+	_ = w.Bind("saveConfig", func(path string, preroll, shiftRadius float64) (string, error) {
 		cfg := launcher.LoadConfig() // keep fields this dialog doesn't edit
 		cfg.CSGOPath = ""
 		if p := strings.Trim(strings.TrimSpace(path), `"`); p != "" {
@@ -486,6 +486,7 @@ func LaunchApp(initialDemoPath string) error {
 			cfg.CSGOPath = dir
 		}
 		cfg.PrerollSeconds = preroll
+		cfg.ShiftRadius = shiftRadius
 		applog.Printf("config: carpeta de CS:GO %q", cfg.CSGOPath)
 		return cfg.CSGOPath, launcher.SaveConfig(cfg)
 	})

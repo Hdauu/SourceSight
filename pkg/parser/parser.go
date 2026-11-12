@@ -30,6 +30,9 @@ type ParserOptions struct {
 	OnProgress func(fraction float64)
 	// Cancel, if set, aborts the analysis as soon as it is closed.
 	Cancel <-chan struct{}
+	// ShiftRadius: distance in units at which an unseen enemy counts as close for the
+	// SHIFT log; 0 means core.ShiftRadiusDefault.
+	ShiftRadius float64
 }
 
 func ParseDemo(demoPath string, opts ParserOptions) (*core.DemoReport, error) {
@@ -81,7 +84,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		return st
 	}
 
-	chat := modules.NewChatInspector()
+	chat := modules.NewChatInspector(tickrate)
 
 	var chatLog []core.ChatMessageEntry
 	var adminLog []core.AdminEvent
@@ -107,6 +110,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		}
 		recentDeaths = kept
 		for _, st := range states {
+			core.EndShift(st, tickrate)
 			modules.ResetPeekRound(st)
 			st.Aim.PrevPitch = nil
 			st.Aim.PrevYaw = nil
@@ -317,6 +321,10 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 
 	lastProgress := time.Now()
 	lastPingTick := 0
+	shiftRadius := opts.ShiftRadius
+	if shiftRadius <= 0 {
+		shiftRadius = core.ShiftRadiusDefault
+	}
 
 	// Frame Hook: optimized per-tick engine processing
 	p.RegisterEventHandler(func(e events.FrameDone) {
@@ -395,6 +403,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 
 			if !pl.IsAlive() {
 				modules.ProcessAimTick(st, tick, pitch, yaw, tickrate, false)
+				core.EndShift(st, tickrate)
 				continue
 			}
 
@@ -477,6 +486,31 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 			}
 		}
 
+		// SHIFT log: walking with an enemy close that the player can't see. Distances
+		// and visibility are only looked up while shift is down or a case is open.
+		// Not during warmup or the freeze at the start of a round: nobody is playing yet.
+		shiftLive := currentRound > 0 && !gs.IsWarmupPeriod() && !gs.IsFreezetimePeriod()
+		for _, cp := range alivePlayers {
+			held := shiftLive && cp.buttons&core.IN_SPEED != 0
+			var near []core.NearEnemy
+			if (held || cp.st.Shift.Active()) && cp.pl.EntityID > 0 {
+				bit := uint(cp.pl.EntityID - 1)
+				for j, en := range alivePlayers {
+					if en.pl.Team == cp.pl.Team {
+						continue
+					}
+					d := core.Dist3D(cp.origin, en.origin)
+					if d > shiftRadius {
+						continue
+					}
+					// Unknown visibility counts as seen, so it never adds a case
+					unseen := maskOK[j] && masks[j]&(1<<bit) == 0
+					near = append(near, core.NearEnemy{Name: en.pl.Name, Dist: d, Unseen: unseen})
+				}
+			}
+			core.ProcessShiftTick(cp.st, tick, currentRound, held, near, tickrate)
+		}
+
 		// Run detection modules
 		for _, cp := range alivePlayers {
 			st := cp.st
@@ -529,6 +563,19 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 			fmt.Printf("[!] Parsing warning: %v\n", parseErr)
 		}
 	}
+
+	// Close SHIFT cases still open when the demo ends, and gather the log
+	var shiftLog []core.ShiftCase
+	for _, st := range states {
+		core.EndShift(st, tickrate)
+		shiftLog = append(shiftLog, st.Shift.Cases...)
+	}
+	sort.Slice(shiftLog, func(i, j int) bool {
+		if shiftLog[i].Tick != shiftLog[j].Tick {
+			return shiftLog[i].Tick < shiftLog[j].Tick
+		}
+		return shiftLog[i].Player < shiftLog[j].Player
+	})
 
 	// Consolidate final player stats
 	var playerStats []core.PlayerStats
@@ -614,6 +661,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 		},
 		Players:  playerStats,
 		AdminLog: adminLog,
+		ShiftLog: shiftLog,
 		ChatLog:  chatLog,
 		Timeline: timeline,
 	}

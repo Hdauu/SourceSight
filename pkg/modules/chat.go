@@ -36,10 +36,12 @@ type ChatTracker struct {
 // its own, so demos analyzed in parallel never share it.
 type ChatInspector struct {
 	trackers map[uint64]*ChatTracker
+	spamGap  int // ticks: repeats closer than 1 s count as a spam bind
 }
 
-func NewChatInspector() *ChatInspector {
-	return &ChatInspector{trackers: map[uint64]*ChatTracker{}}
+// tickrate is the demo's, so the 1 s spam window holds at 64 and 128 tick.
+func NewChatInspector(tickrate int) *ChatInspector {
+	return &ChatInspector{trackers: map[uint64]*ChatTracker{}, spamGap: tickrate}
 }
 
 // Inspect analyzes a chat message for toxicity, spam binds, and all-chat ghosting.
@@ -88,7 +90,7 @@ func (ci *ChatInspector) Inspect(
 		ci.trackers[senderSteamID] = tr
 	}
 
-	if tr.LastMsgText == trimmed && (tick-tr.LastMsgTick) <= 64 {
+	if tr.LastMsgText == trimmed && (tick-tr.LastMsgTick) <= ci.spamGap {
 		tr.RepeatCount++
 		if tr.RepeatCount >= 3 && category == "" {
 			category = "SPAM BIND"

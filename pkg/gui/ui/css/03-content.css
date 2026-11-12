@@ -213,3 +213,7 @@ td.player { color: var(--text); font-weight: 500; }
 .body-fig .bz-name { font: 10.5px "Segoe UI", system-ui, sans-serif; fill: var(--muted); }
 .body-foot { font-size: 12px; margin-top: 8px; }
 .panel-body { padding: 14px 16px; }
+
+/* Short explanation under a panel title (SHIFT log) */
+.panel-note { padding: 0 16px 10px; font-size: 12px; }
+.panel-note:empty { display: none; }
