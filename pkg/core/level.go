@@ -85,4 +85,6 @@ func KnownFlags() []string {
 //	   round, wallhack and revenge windows scaled to the demo tickrate
 //	5: SHIFT log (walking near unseen enemies); chat spam window scaled to the tickrate
 //	6: positions for the minimap (kills and once-per-second paths)
-const AnalysisVersion = 6
+//	7: aim snaps during connection hiccups (bunched commands, warps, ping spikes) not counted;
+//	   every player who played is listed
+const AnalysisVersion = 7

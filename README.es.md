@@ -188,6 +188,7 @@ Cada detección explica: qué busca, qué datos usa, cómo calcula, cuándo marc
 - Se mide cuánto giró la vista entre un tick y el siguiente, corrigiendo el salto de 359° a 0°.
 - Un giro de más de **45° en un solo tick** es un *snap* (a 128 tick, un tick son 7,8 ms).
 - Se ignoran los primeros 3 segundos después de aparecer y los cambios a un pitch exactamente 0: son ángulos que impone el servidor al spawnear o teletransportar.
+- **No cuentan los giros medidos durante un corte de conexión.** Con lag, los comandos del jugador llegan amontonados y el giro de varios ticks aparece de golpe en uno. Se descarta el snap si en ese tick: el servidor procesó más de un comando del jugador (se ve en su *tickbase*, que avanza uno por comando), el jugador se movió a más de 1200 u/s (un warpeo; nadie corre tan rápido, ni con bhop), o tuvo un pico de ping. Esos giros se cuentan aparte ("Giros con lag") y, si son 5 o más, se avisa en las observaciones. Un ping alto pero estable no genera snaps y no se descuenta nada.
 
 **Cuándo marca.** Solo si los snaps se agrupan: al menos 5 dentro de un mismo segundo y 10 o más en la partida.
 - 50 snaps o más: **AIMLOCK (cheat)**.

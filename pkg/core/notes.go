@@ -28,6 +28,7 @@ type NoteCounts struct {
 	PingSum, PingN int // demo ping averages, summed
 	PingMax        int
 	LagDiscarded   int
+	LagSnaps       int
 }
 
 // CountsFromStats extracts the counts of one player in one demo.
@@ -37,6 +38,7 @@ func CountsFromStats(p *PlayerStats) NoteCounts {
 		Prefires:     p.Prefires,
 		PingMax:      p.PingMax,
 		LagDiscarded: p.LagDiscarded,
+		LagSnaps:     p.LagSnaps,
 	}
 	if h := p.Hits; h != nil {
 		c.Hits = h.Zones.Total().Hits
@@ -70,6 +72,7 @@ func (c *NoteCounts) Add(o NoteCounts) {
 	c.PingN += o.PingN
 	c.PingMax = max(c.PingMax, o.PingMax)
 	c.LagDiscarded += o.LagDiscarded
+	c.LagSnaps += o.LagSnaps
 }
 
 // Minimum data for each comparison, for the player and for the baseline.
@@ -147,6 +150,9 @@ func Notes(me, base NoteCounts, baseLabel string) []string {
 	if me.LagDiscarded > 0 {
 		out = append(out, fmt.Sprintf("Se descartaron %d reacciones medidas durante picos de lag.", me.LagDiscarded))
 	}
+	if me.LagSnaps >= 5 { // a few happen to anyone on a shaky connection
+		out = append(out, fmt.Sprintf("No se contaron %d giros bruscos de la mira porque coincidieron con cortes de conexión (comandos amontonados, warpeo o pico de ping).", me.LagSnaps))
+	}
 	return out
 }
 
@@ -179,5 +185,6 @@ func (c NoteCounts) without(o NoteCounts) NoteCounts {
 	c.PingSum -= o.PingSum
 	c.PingN -= o.PingN
 	c.LagDiscarded -= o.LagDiscarded
+	c.LagSnaps -= o.LagSnaps
 	return c
 }

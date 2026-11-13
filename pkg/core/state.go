@@ -52,8 +52,11 @@ type TriggerData struct {
 type AimData struct {
 	PrevPitch    *float32
 	PrevYaw      *float32
+	PrevOrigin   *Vec3 // position last tick, to spot warping
 	AliveTicks   int
 	SnapEvents   []TimelineIncident
+	LagSnaps     int // snaps measured during a connection hiccup, not counted (see modules.ProcessAimTick)
+	TickBase     int // last tickbase seen; -1 or 0 when unknown
 	SilentEvents []TimelineIncident
 }
 
@@ -179,6 +182,7 @@ type PlayerStats struct {
 	PrefireRatio        float64            `json:"prefireRatio"`
 	PeekReactionMs      *int               `json:"peekReactionMs"`         // median, from becoming visible to first damage
 	LagDiscarded        int                `json:"lagDiscarded,omitempty"` // reactions ignored: measured during a ping spike
+	LagSnaps            int                `json:"lagSnaps,omitempty"`     // snaps not counted: measured during a connection hiccup
 	PingAvg             int                `json:"pingAvg,omitempty"`
 	PingMax             int                `json:"pingMax,omitempty"`
 	Hits                *HitProfile        `json:"hits,omitempty"`
@@ -374,6 +378,7 @@ func (ps *PlayerState) ComputeStats(tickrate int) PlayerStats {
 		PrefireRatio:    math.Round(prefireRatio*10) / 10,
 		PeekReactionMs:  peekMedian,
 		LagDiscarded:    ps.Peek.LagDiscarded + ps.Trigger.LagDiscarded,
+		LagSnaps:        ps.Aim.LagSnaps,
 		PingAvg:         ps.Ping.Average(),
 		PingMax:         ps.Ping.Max,
 		Hits:            hitsOrNil(&ps.Hits),

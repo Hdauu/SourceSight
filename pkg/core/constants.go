@@ -32,6 +32,7 @@ const (
 
 	// Module C: Aimlock & Silent Aim
 	AimSnapThresholdDeg = 45.0
+	AimWarpSpeed        = 1200.0 // u/s: moving faster than this in one tick is a warp (lag), not running
 	AimWrapThreshold    = 180.0
 	AimAliveWarmup      = 192 // ticks after spawn to ignore warmup flick
 	AimMinSnapsToFlag   = 10

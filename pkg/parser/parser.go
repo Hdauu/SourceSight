@@ -386,6 +386,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 			onLadder    bool
 			speed       float64
 			origin      core.Vec3
+			commands    int // usercmds run this tick (tickbase delta), -1 if unknown
 		}
 
 		var alivePlayers []cachedPlayer
@@ -422,7 +423,8 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 			}
 
 			if !pl.IsAlive() {
-				modules.ProcessAimTick(st, tick, pitch, yaw, tickrate, false)
+				st.Aim.TickBase = -1
+				modules.ProcessAimTick(st, tick, modules.AimTick{Pitch: pitch, Yaw: yaw}, tickrate, false)
 				core.EndShift(st, tickrate)
 				continue
 			}
@@ -444,6 +446,19 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 
 			speed := math.Sqrt(vel.X*vel.X + vel.Y*vel.Y)
 
+			// Commands run this tick: the tickbase advances one per usercmd, so a jump of
+			// more than one means commands arrived bunched (connection hiccup)
+			commands := -1
+			if pl.Entity != nil {
+				if prop := pl.Entity.Property("localdata.m_nTickBase"); prop != nil {
+					tb := prop.Value().Int()
+					if st.Aim.TickBase > 0 {
+						commands = tb - st.Aim.TickBase
+					}
+					st.Aim.TickBase = tb
+				}
+			}
+
 			cp := cachedPlayer{
 				pl:          pl,
 				st:          st,
@@ -455,6 +470,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 				onLadder:    moveType == core.MOVETYPE_LADDER,
 				speed:       speed,
 				origin:      st.Origin,
+				commands:    commands,
 			}
 			alivePlayers = append(alivePlayers, cp)
 		}
@@ -562,7 +578,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 			// so a prefire on the killer's spot is not proof — see modules.CheckGhosting.
 
 			// Module C: Aimlock
-			modules.ProcessAimTick(st, tick, st.Pitch, st.Yaw, tickrate, true)
+			modules.ProcessAimTick(st, tick, modules.AimTick{Pitch: st.Pitch, Yaw: st.Yaw, Origin: cp.origin, Commands: cp.commands}, tickrate, true)
 
 			// Module E: Macro
 			if attackRisingEdge && cp.pl.ActiveWeapon() != nil {
@@ -600,8 +616,9 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 	// Consolidate final player stats
 	var playerStats []core.PlayerStats
 	for _, st := range states {
-		// Skip spectators / non-active players with 0 jumps and 0 engagements
-		if st.Bhop.TotalJumps < 2 && len(st.Trigger.ReactionDeltas) == 0 &&
+		// Skip spectators: players never sampled alive who did nothing measurable. Anyone
+		// who played shows up, even with nothing flagged (or only lag-discarded snaps).
+		if len(st.Path.Points) == 0 && st.Aim.LagSnaps == 0 && st.Bhop.TotalJumps < 2 && len(st.Trigger.ReactionDeltas) == 0 &&
 			len(st.Aim.SnapEvents) == 0 && len(st.Aim.SilentEvents) == 0 &&
 			st.Grief.TeamflashSecs < 5.0 && len(st.Ghost.Incidents) == 0 {
 			continue

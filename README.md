@@ -190,6 +190,7 @@ Each detection explains: what it looks for, which data it uses, how it computes,
 - How much the view turned between one tick and the next is measured, correcting the 359° → 0° wrap.
 - A turn of more than **45° in a single tick** is a *snap* (at 128 tick, a tick is 7.8 ms).
 - The first 3 seconds after spawning and changes to a pitch of exactly 0 are ignored: those are angles forced by the server on spawn or teleport.
+- **Turns measured during a connection hiccup don't count.** With lag, the player's commands arrive bunched and several ticks of turning show up at once in one. A snap is dropped if on that tick: the server ran more than one of the player's commands (seen in their *tickbase*, which advances one per command), the player moved faster than 1200 u/s (a warp; nobody runs that fast, not even bunny hopping), or their ping spiked. Those turns are counted separately ("Giros con lag") and, if there are 5 or more, the observations say so. A high but steady ping causes no snaps and nothing is discounted.
 
 **When it flags.** Only when snaps cluster: at least 5 within one second and 10 or more in the match.
 - 50 snaps or more: **AIMLOCK (cheat)**.

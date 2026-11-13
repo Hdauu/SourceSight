@@ -228,5 +228,8 @@ function hitStats(p) {
     if (p.lagDiscarded) {
         html += stat('Reacciones con lag', p.lagDiscarded + ' descartadas');
     }
+    if (p.lagSnaps) {
+        html += stat('Giros con lag', p.lagSnaps + ' no contados');
+    }
     return html;
 }
