@@ -386,6 +386,8 @@ Across 25 real demos, spikes cover 0.09% of the time players are alive, and none
 
 Each player's average and peak ping are shown in their detail and page. Ping alone never flags anyone.
 
+**Ping of each incident.** Every incident shows the ping the player had at that moment (the latest scoreboard reading, up to a second earlier), in yellow if it was a spike. It appears in the incident list, the player detail, the Discord summary and the bot. It shows at a glance whether something happened on a broken connection. Being one reading per second, a very short hiccup may not show.
+
 ## Automatic observations
 
 `pkg/core/notes.go`

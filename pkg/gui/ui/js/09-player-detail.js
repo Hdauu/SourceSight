@@ -78,7 +78,7 @@ function openPlayer(p) {
         html += '<div class="list">' + incs.slice().sort((a, b) => a.tick - b.tick).map(inc =>
             '<div class="list-row">' +
                 '<span class="muted num" style="width:46px; flex-shrink:0;">R' + roundOf(inc.tick) + '</span>' +
-                typeTag(inc.type) +
+                typeTag(inc.type) + pingTag(inc) +
                 '<span class="grow" title="' + esc(inc.note) + '">' + esc(inc.note) + '</span>' +
                 cmdButton(inc.gotoCmd) + playButton(inc.tick, sid) +
             '</div>'

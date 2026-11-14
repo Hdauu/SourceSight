@@ -35,6 +35,13 @@ function playButton(tick, steamId) {
 }
 
 const RED_TYPES = /TRIGGER|SILENT|WALL/;
+// Ping the player had when an incident happened; yellow if it was a spike.
+function pingTag(inc) {
+    if (!inc.ping) return '';
+    const title = inc.pingSpike ? 'Pico de ping: muy por encima de su ping habitual' : 'Ping en ese momento';
+    return '<span class="tag ' + (inc.pingSpike ? 'tag-yellow' : 'tag-plain') + '" title="' + title + '" style="white-space:nowrap;">' + inc.ping + ' ms</span>';
+}
+
 function typeTag(type) {
     const cls = RED_TYPES.test(type) ? 'tag-red' : 'tag-yellow';
     return '<span class="tag ' + cls + '">' + esc(type) + '</span>';

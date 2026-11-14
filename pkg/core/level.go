@@ -88,4 +88,5 @@ func KnownFlags() []string {
 //	6: positions for the minimap (kills and once-per-second paths)
 //	7: aim snaps during connection hiccups (bunched commands, warps, ping spikes) not counted;
 //	   every player who played is listed; POSIBLE-LAG for bad connections
-const AnalysisVersion = 7
+//	8: every incident carries the ping the player had when it happened
+const AnalysisVersion = 8

@@ -275,7 +275,14 @@ func main() {
 			maxTl = 5
 		}
 		for _, inc := range rep.Timeline[:maxTl] {
-			tlLines = append(tlLines, fmt.Sprintf("`%s` — %s [%s]", inc.GotoCmd, inc.Player, inc.Type))
+			line := fmt.Sprintf("`%s` — %s [%s]", inc.GotoCmd, inc.Player, inc.Type)
+			if inc.Ping > 0 {
+				line += fmt.Sprintf(" · %d ms", inc.Ping)
+				if inc.PingSpike {
+					line += " (pico)"
+				}
+			}
+			tlLines = append(tlLines, line)
 		}
 		tlStr := "—"
 		if len(tlLines) > 0 {

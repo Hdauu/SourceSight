@@ -365,7 +365,7 @@ func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) 
 			lastPingTick = tick
 			for _, pl := range gs.Participants().Playing() {
 				if st := getState(pl); st != nil && pl.IsAlive() {
-					st.Ping.Sample(pl.Ping())
+					st.Ping.SampleAt(tick, pl.Ping())
 					// Minimap path, same once-per-second rate; not during warmup
 					if currentRound > 0 && !gs.IsWarmupPeriod() {
 						pos := pl.Position()

@@ -384,6 +384,8 @@ En 25 demos reales, los picos ocupan el 0,09 % del tiempo con los jugadores vivo
 
 El ping promedio y el pico de cada jugador se muestran en su detalle y en su ficha. El ping solo nunca marca a nadie.
 
+**Ping de cada incidente.** Cada incidente muestra el ping que tenía el jugador en ese momento (la última lectura del scoreboard, de hasta un segundo antes), en amarillo si era un pico. Aparece en la lista de incidentes, en el detalle del jugador, en el resumen para Discord y en el bot. Sirve para ver de un vistazo si algo pasó con la conexión cortada. Al ser una lectura por segundo, un corte muy breve puede no verse.
+
 ## Observaciones automáticas
 
 `pkg/core/notes.go`

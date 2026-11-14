@@ -101,7 +101,7 @@ function renderTimeline() {
             '<td class="player">' + esc(inc.player) + '</td>' +
             '<td>' + cmdButton(inc.gotoCmd) + '</td>' +
             '<td>' + playButton(inc.tick, inc.steamId) + '</td>' +
-            '<td class="wrap muted" style="min-width:260px;">' + esc(inc.note) + '</td>' +
+            '<td class="wrap muted" style="min-width:260px;">' + pingTag(inc) + ' ' + esc(inc.note) + '</td>' +
         '</tr>'
     ).join('');
     document.getElementById('timelineMore').style.display = shown < all.length ? 'block' : 'none';

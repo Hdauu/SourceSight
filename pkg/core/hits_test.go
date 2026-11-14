@@ -123,3 +123,29 @@ func TestBodyZonesJSON(t *testing.T) {
 		t.Fatalf("round trip = %+v", back)
 	}
 }
+
+func TestPingAt(t *testing.T) {
+	var p PingData
+	if ms, _ := p.At(100); ms != 0 {
+		t.Fatalf("no readings: %d", ms)
+	}
+	for i, ms := range []int{30, 30, 30, 30, 140, 30} {
+		p.SampleAt(1000+i*128, ms)
+	}
+	cases := []struct {
+		tick  int
+		ms    int
+		spike bool
+	}{
+		{500, 30, false},               // before the first reading: the first one
+		{1000 + 4*128 + 50, 140, true}, // during the spike
+		{1000 + 5*128, 30, false},      // exactly on a reading
+		{99999, 30, false},             // after the last
+	}
+	for _, c := range cases {
+		ms, spike := p.At(c.tick)
+		if ms != c.ms || spike != c.spike {
+			t.Errorf("At(%d) = %d,%v want %d,%v", c.tick, ms, spike, c.ms, c.spike)
+		}
+	}
+}

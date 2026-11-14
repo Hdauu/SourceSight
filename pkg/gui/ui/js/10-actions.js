@@ -58,7 +58,7 @@ function copyStaffSummary() {
     if (tl.length) {
         md += '\nPrimeros incidentes:\n';
         tl.slice(0, 5).forEach(inc => {
-            md += '- R' + roundOf(inc.tick) + ' ' + inc.player + ' ' + inc.type + ': ' + q + inc.gotoCmd + q + '\n';
+            md += '- R' + roundOf(inc.tick) + ' ' + inc.player + ' ' + inc.type + ': ' + q + inc.gotoCmd + q + (inc.ping ? ' · ' + inc.ping + ' ms' + (inc.pingSpike ? ' (pico)' : '') : '') + '\n';
         });
     }
     copyText(md, 'Resumen copiado');

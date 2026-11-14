@@ -1,5 +1,7 @@
 package core
 
+import "sort"
+
 // Ping as the scoreboard shows it, which the server updates about once a second.
 //
 // Reaction times (prefire, triggerbot) are measured between two things that both
@@ -20,6 +22,37 @@ type PingData struct {
 	Count    int
 	Max      int
 	baseline float64
+	samples  []pingSample
+}
+
+// pingSample is one scoreboard reading kept so incidents can show the ping they
+// happened with (about one per second: a few thousand per player at most).
+type pingSample struct {
+	tick  int
+	ms    int
+	spike bool
+}
+
+// SampleAt records the scoreboard ping read on a tick.
+func (p *PingData) SampleAt(tick, ms int) {
+	if ms <= 0 {
+		return
+	}
+	p.Sample(ms)
+	p.samples = append(p.samples, pingSample{tick: tick, ms: ms, spike: p.Spiking()})
+}
+
+// At returns the ping read last before tick (or the first one, if tick comes before
+// any reading) and whether it was a spike. 0 if there are no readings.
+func (p *PingData) At(tick int) (ms int, spike bool) {
+	if len(p.samples) == 0 {
+		return 0, false
+	}
+	i := sort.Search(len(p.samples), func(i int) bool { return p.samples[i].tick > tick })
+	if i > 0 {
+		i--
+	}
+	return p.samples[i].ms, p.samples[i].spike
 }
 
 // Sample records the scoreboard ping. Zero means unknown (bots, not connected).

@@ -13,6 +13,10 @@ type TimelineIncident struct {
 	SteamID uint64 `json:"steamId,string"`
 	GotoCmd string `json:"gotoCmd"`
 	Note    string `json:"note"`
+	// Scoreboard ping when it happened (read once per second); PingSpike when it was
+	// well above the player's usual one.
+	Ping      int  `json:"ping,omitempty"`
+	PingSpike bool `json:"pingSpike,omitempty"`
 }
 
 type ChatMessageEntry struct {
@@ -348,6 +352,7 @@ func (ps *PlayerState) ComputeStats(tickrate int) PlayerStats {
 			prerollTick = 128
 		}
 		incs[i].GotoCmd = fmt.Sprintf("demo_gototick %d", prerollTick)
+		incs[i].Ping, incs[i].PingSpike = ps.Ping.At(incs[i].Tick)
 		incs[i].Player = ps.Name
 		incs[i].SteamID = ps.SteamID
 	}
