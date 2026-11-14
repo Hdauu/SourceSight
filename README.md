@@ -195,7 +195,7 @@ Each detection explains: what it looks for, which data it uses, how it computes,
 **When it flags.** Only when snaps cluster: at least 5 within one second and 10 or more in the match.
 - 50 snaps or more: **AIMLOCK (cheat)**.
 - 10 to 49: **SOSPECHOSO-AIM**.
-- **POSIBLE-LAG** instead of either if the player has a bad connection (average ping of 80 ms or more, or a spike of 200 ms or more) and at least 20% of their sharp turns already landed on connection hiccups. With a connection like that, the lag filter can't see every hiccup and the remaining snaps are probably lag too. It stays suspicious so someone looks at the demo. It never applies with a low ping, however many lag turns.
+- **POSIBLE-LAG** instead of either if the player has a bad connection (average ping of 80 ms or more) and at least 20% of their sharp turns already landed on connection hiccups. With a connection like that, the lag filter can't see every hiccup and the remaining snaps are probably lag too. It stays suspicious so someone looks at the demo. It never applies with a low ping, however many lag turns.
 
 **Why.** A fast human flick can produce a single snap, but never 5 in a second. A spinbot produces hundreds: the yaw jumps to a different value every tick, usually with the pitch stuck at ±89°. Between 10 and 49 it can be a cheat toggled briefly or odd flicks, worth a look.
 

@@ -44,6 +44,13 @@ func TestDetectionRules(t *testing.T) {
 				ps.Ping.Sample(5)
 			}
 		}, "AIMLOCK", LevelCheat},
+		{"one big spike on a good connection keeps aimlock", func(ps *PlayerState) {
+			ps.Aim.SnapEvents, ps.Aim.LagSnaps = snaps(100), 50
+			for range 5 {
+				ps.Ping.Sample(30)
+			}
+			ps.Ping.Sample(300)
+		}, "AIMLOCK", LevelCheat},
 		{"high ping with few lag snaps keeps aimlock", func(ps *PlayerState) {
 			ps.Aim.SnapEvents, ps.Aim.LagSnaps = snaps(200), 10
 			for range 5 {

@@ -431,10 +431,10 @@ type DemoReport struct {
 // maxSnapBurst returns the largest number of snaps inside any 1-second window.
 // Snap events are appended in tick order, so a two-pointer sweep suffices.
 // aimLooksLikeLag says whether the player's snaps are better explained by a bad
-// connection: high or spiky ping, and a good part of the snaps already caught on
+// connection: an average ping of 80 ms or more, and a good part of the snaps already caught on
 // connection hiccups. A low-ping player never qualifies, however many lag snaps.
 func (ps *PlayerState) aimLooksLikeLag() bool {
-	badPing := ps.Ping.Average() >= AimLagPingAvgMs || ps.Ping.Max >= AimLagPingMaxMs
+	badPing := ps.Ping.Average() >= AimLagPingAvgMs
 	total := len(ps.Aim.SnapEvents) + ps.Aim.LagSnaps
 	return badPing && total > 0 && 100*ps.Aim.LagSnaps >= AimLagMinSharePct*total
 }
