@@ -19,6 +19,7 @@ var flagLevels = map[string]string{
 
 	"SOSPECHOSO-BHOP": LevelSuspect,
 	"SOSPECHOSO-AIM":  LevelSuspect,
+	"POSIBLE-LAG":     LevelSuspect,
 	"ANTI-FLASH":      LevelSuspect,
 	"SMOKE-VISION":    LevelSuspect,
 	"PREFIRE":         LevelSuspect,
@@ -86,5 +87,5 @@ func KnownFlags() []string {
 //	5: SHIFT log (walking near unseen enemies); chat spam window scaled to the tickrate
 //	6: positions for the minimap (kills and once-per-second paths)
 //	7: aim snaps during connection hiccups (bunched commands, warps, ping spikes) not counted;
-//	   every player who played is listed
+//	   every player who played is listed; POSIBLE-LAG for bad connections
 const AnalysisVersion = 7

@@ -36,9 +36,15 @@ const (
 	AimWrapThreshold    = 180.0
 	AimAliveWarmup      = 192 // ticks after spawn to ignore warmup flick
 	AimMinSnapsToFlag   = 10
-	AimCheatMinSnaps    = 50   // spinbots: hundreds of snaps; fewer stays suspicious
-	AimBurstMinSnaps    = 5    // snaps inside a 1s window: isolated human flicks never cluster like this
-	SilentAimDivDeg     = 25.0 // exceeds maximum running spray inaccuracy cone
+	AimCheatMinSnaps    = 50 // spinbots: hundreds of snaps; fewer stays suspicious
+	AimBurstMinSnaps    = 5  // snaps inside a 1s window: isolated human flicks never cluster like this
+	// A player with a bad connection (high average ping or big spikes) whose snaps often
+	// land on connection hiccups gets POSIBLE-LAG instead of an aim flag: the remaining
+	// snaps are likely lag the filter could not see.
+	AimLagPingAvgMs   = 80
+	AimLagPingMaxMs   = 200
+	AimLagMinSharePct = 20   // lag snaps, as % of all snaps
+	SilentAimDivDeg   = 25.0 // exceeds maximum running spray inaccuracy cone
 
 	// Module D: Anti-Flash & Smoke
 	FlashBlindAlpha  = 255.0

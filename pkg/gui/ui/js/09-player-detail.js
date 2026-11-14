@@ -229,7 +229,7 @@ function hitStats(p) {
         html += stat('Reacciones con lag', p.lagDiscarded + ' descartadas');
     }
     if (p.lagSnaps) {
-        html += stat('Giros con lag', p.lagSnaps + ' no contados');
+        html += stat('Giros con lag', p.lagSnaps + ' no contados', (p.flags || []).includes('POSIBLE-LAG') ? 't-yellow' : '');
     }
     return html;
 }

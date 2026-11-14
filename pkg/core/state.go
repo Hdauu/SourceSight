@@ -249,7 +249,9 @@ func (ps *PlayerState) ComputeStats(tickrate int) PlayerStats {
 	// Spinbots produce hundreds of snaps; a handful in bursts is worth a look but can be
 	// a brief toggle or odd flicks, so it is only suspicious.
 	if len(ps.Aim.SnapEvents) >= AimMinSnapsToFlag && maxSnapBurst(ps.Aim.SnapEvents, tickrate) >= AimBurstMinSnaps {
-		if len(ps.Aim.SnapEvents) >= AimCheatMinSnaps {
+		if ps.aimLooksLikeLag() {
+			flags = append(flags, "POSIBLE-LAG")
+		} else if len(ps.Aim.SnapEvents) >= AimCheatMinSnaps {
 			flags = append(flags, "AIMLOCK")
 		} else {
 			flags = append(flags, "SOSPECHOSO-AIM")
@@ -428,6 +430,15 @@ type DemoReport struct {
 
 // maxSnapBurst returns the largest number of snaps inside any 1-second window.
 // Snap events are appended in tick order, so a two-pointer sweep suffices.
+// aimLooksLikeLag says whether the player's snaps are better explained by a bad
+// connection: high or spiky ping, and a good part of the snaps already caught on
+// connection hiccups. A low-ping player never qualifies, however many lag snaps.
+func (ps *PlayerState) aimLooksLikeLag() bool {
+	badPing := ps.Ping.Average() >= AimLagPingAvgMs || ps.Ping.Max >= AimLagPingMaxMs
+	total := len(ps.Aim.SnapEvents) + ps.Aim.LagSnaps
+	return badPing && total > 0 && 100*ps.Aim.LagSnaps >= AimLagMinSharePct*total
+}
+
 func maxSnapBurst(snaps []TimelineIncident, tickrate int) int {
 	best := 0
 	lo := 0

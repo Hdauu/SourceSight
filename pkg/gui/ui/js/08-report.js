@@ -76,7 +76,7 @@ function renderPlayers() {
             '<td class="r ' + (hasTrig && p.triggerAvgMs < 80 ? 't-red' : '') + '">' + (hasTrig ? p.triggerAvgMs + ' ms' : dash) + '</td>' +
             '<td class="r' + (flags.includes('PREFIRE') ? ' t-red' : '') + '">' + (p.peekEngagements ? p.prefireRatio + '%' : dash) + '</td>' +
             '<td class="r">' + (t && t.headPct !== null ? t.headPct + '%' : dash) + '</td>' +
-            '<td class="r ' + (flags.includes('AIMLOCK') ? 't-red' : flags.includes('SOSPECHOSO-AIM') ? 't-yellow' : '') + '">' + (p.snapCount || dash) + '</td>' +
+            '<td class="r ' + (flags.includes('AIMLOCK') ? 't-red' : (flags.includes('SOSPECHOSO-AIM') || flags.includes('POSIBLE-LAG')) ? 't-yellow' : '') + '">' + (p.snapCount || dash) + '</td>' +
             '<td class="r">' + (p.shiftCases || dash) + '</td>' +
             '<td class="r muted">' + (p.pingAvg ? p.pingAvg + ' ms' : '–') + '</td>';
         body.appendChild(tr);

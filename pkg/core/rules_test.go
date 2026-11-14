@@ -32,6 +32,24 @@ func TestDetectionRules(t *testing.T) {
 		}, "SOSPECHOSO-BHOP", LevelSuspect},
 		{"high ratio over few jumps is nothing (ZywOo: 60% in 15)", func(ps *PlayerState) { ps.Bhop.TotalJumps, ps.Bhop.PerfectHops = 15, 9 }, "", LevelClean},
 		{"spinbot", func(ps *PlayerState) { ps.Aim.SnapEvents = snaps(200) }, "AIMLOCK", LevelCheat},
+		{"high ping and many lag snaps is possible lag (JotA: 115 + 43 lag, ping 96)", func(ps *PlayerState) {
+			ps.Aim.SnapEvents, ps.Aim.LagSnaps = snaps(115), 43
+			for range 5 {
+				ps.Ping.Sample(96)
+			}
+		}, "POSIBLE-LAG", LevelSuspect},
+		{"low ping keeps aimlock however many lag snaps (kabu: 95 + 62 lag, ping 5)", func(ps *PlayerState) {
+			ps.Aim.SnapEvents, ps.Aim.LagSnaps = snaps(95), 62
+			for range 5 {
+				ps.Ping.Sample(5)
+			}
+		}, "AIMLOCK", LevelCheat},
+		{"high ping with few lag snaps keeps aimlock", func(ps *PlayerState) {
+			ps.Aim.SnapEvents, ps.Aim.LagSnaps = snaps(200), 10
+			for range 5 {
+				ps.Ping.Sample(120)
+			}
+		}, "AIMLOCK", LevelCheat},
 		{"few snaps in a burst is only suspicious (3ly0-: 17)", func(ps *PlayerState) { ps.Aim.SnapEvents = snaps(17) }, "SOSPECHOSO-AIM", LevelSuspect},
 	}
 	for _, c := range cases {

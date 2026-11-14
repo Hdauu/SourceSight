@@ -178,7 +178,7 @@ Cada detección explica: qué busca, qué datos usa, cómo calcula, cuándo marc
 
 ### Aimlock y spinbot
 
-`pkg/modules/aim.go` · nivel **cheat** (AIMLOCK) o **sospechoso** (SOSPECHOSO-AIM)
+`pkg/modules/aim.go` · nivel **cheat** (AIMLOCK) o **sospechoso** (SOSPECHOSO-AIM, POSIBLE-LAG)
 
 **Qué busca.** Mira que salta de golpe al objetivo (aimlock) o que gira sin parar (spinbot / anti-aim).
 
@@ -193,6 +193,7 @@ Cada detección explica: qué busca, qué datos usa, cómo calcula, cuándo marc
 **Cuándo marca.** Solo si los snaps se agrupan: al menos 5 dentro de un mismo segundo y 10 o más en la partida.
 - 50 snaps o más: **AIMLOCK (cheat)**.
 - De 10 a 49: **SOSPECHOSO-AIM**.
+- **POSIBLE-LAG** en lugar de cualquiera de los dos si el jugador tiene mala conexión (ping promedio de 80 ms o más, o algún pico de 200 ms o más) y al menos el 20 % de sus giros bruscos ya cayeron en cortes de conexión. Con una conexión así, el filtro de lag no ve todos los cortes y los snaps que quedan probablemente también sean lag. Queda como sospechoso para que alguien mire la demo. Con ping bajo nunca aplica, por más giros con lag que tenga.
 
 **Por qué.** Un flick humano rápido puede producir algún snap suelto, pero nunca 5 en un segundo. Un spinbot produce cientos: el yaw salta a un valor distinto en cada tick, normalmente con el pitch fijo en ±89°. Entre 10 y 49 puede ser un cheat activado un momento o flicks raros, y conviene mirarlo.
 
