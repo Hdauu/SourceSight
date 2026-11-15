@@ -8,6 +8,9 @@ import (
 	"os"
 )
 
+// readBlock: read size, as on Windows (open_windows.go)
+const readBlock = 8 << 20
+
 type bufferedFile struct {
 	*bufio.Reader
 	f *os.File
@@ -21,5 +24,5 @@ func openDemo(path string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bufferedFile{bufio.NewReaderSize(f, 8<<20), f}, nil
+	return bufferedFile{bufio.NewReaderSize(f, readBlock), f}, nil
 }
