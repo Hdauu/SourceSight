@@ -512,7 +512,15 @@ The **Jugadores** tab adds each player (by SteamID) up across all your demos:
 - **their average against the rest of the players** (everyone else, without them, so the comparison isn't pulled toward their own numbers): bhop perfs, reaction, prefire, head hits, ping, snaps, silent aim and wallhack per demo. Values well above are shown in red;
 - the where-they-hit figure, compared with the average;
 - the observations of their demos added up;
-- the list of their demos, click to open each.
+- the list of their demos, click to review them one by one.
+
+**Reviewing a player demo by demo.** Clicking one of their demos opens it straight on their detail: their incidents with the tick, the ping at that moment and the button to watch it in game. A "Revisando a …" (reviewing) bar stays above the report with:
+- **Anterior / Siguiente** (previous / next): goes to their other demo, in the same order as the table on their page, and opens their detail again;
+- **Solo marcadas** (only flagged): jumps only between demos where they had a detection;
+- **Ver sus incidentes** (see their incidents): reopens their detail if you closed it;
+- **Volver a su ficha** (back to their page): returns to the player page.
+
+The review continues if you re-analyze the demo, and ends when you open a demo that isn't theirs or with the X.
 
 **Search.** By name, SteamID64, Steam profile link, `STEAM_0:X:Y` or `[U:1:N]`.
 

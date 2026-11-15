@@ -35,6 +35,10 @@
     font-size: 12.5px;
 }
 .notice .grow { flex: 1; }
+/* Reviewing a player demo by demo (21-review.js) */
+.review-bar { flex-wrap: wrap; border-color: var(--accent); }
+.review-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.btn:disabled { opacity: .45; cursor: default; }
 
 .summary {
     display: grid;

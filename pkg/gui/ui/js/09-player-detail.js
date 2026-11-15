@@ -21,6 +21,11 @@ function openPlayer(p) {
     const hasTrig = p.triggerAvgMs !== null && p.triggerAvgMs !== undefined;
     let html = '';
 
+    // Reviewing this player demo by demo (21-review.js)
+    if (reviewCtx && reviewCtx.steamId === sid) {
+        html += '<div class="review-row">' + reviewNav() + '<span class="grow"></span><button class="btn" onclick="reviewBack()">Volver a su ficha</button></div>';
+    }
+
     if (p.previousInfractions > 0) {
         html += '<div class="callout callout-red">Tiene ' + p.previousInfractions + (p.previousInfractions === 1 ? ' detección anterior' : ' detecciones anteriores') + ' en demos que analizaste antes.</div>';
     }

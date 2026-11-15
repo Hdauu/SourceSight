@@ -112,4 +112,5 @@ function loadDemoReport(report, meta) {
     updateTabCounts();
     renderHistory();
     document.getElementById('main').scrollTop = 0;
+    reviewAfterLoad(); // 21-review.js
 }

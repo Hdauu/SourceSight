@@ -509,7 +509,15 @@ La pestaña **Jugadores** suma a cada jugador (por SteamID) en todas tus demos:
 - **su promedio contra el resto de los jugadores** (todos los demás, sin contarlo a él, para que la comparación no se corra hacia sus propios números): perfs de bhop, reacción, prefire, impactos a la cabeza, ping, snaps, silent aim y wallhack por demo. En rojo, lo que está muy por encima;
 - la figura de dónde pega, comparada con el promedio;
 - las observaciones de sus demos sumadas;
-- la lista de sus demos, con click para abrir cada una.
+- la lista de sus demos, con click para revisarlas una por una.
+
+**Revisar a un jugador demo por demo.** Al hacer click en una de sus demos, se abre directamente en su detalle: sus incidentes con el tick, el ping de ese momento y el botón para verlo en el juego. Arriba del reporte queda una barra "Revisando a …" con:
+- **Anterior / Siguiente:** pasa a su otra demo, en el mismo orden que la tabla de su ficha, y abre de nuevo su detalle;
+- **Solo marcadas:** salta solo entre las demos en las que tuvo alguna detección;
+- **Ver sus incidentes:** vuelve a abrir su detalle si lo cerraste;
+- **Volver a su ficha:** regresa a la página del jugador.
+
+La revisión sigue aunque re-analices la demo, y termina al abrir una demo que no es suya o con la X.
 
 **Búsqueda.** Por nombre, SteamID64, link de perfil de Steam, `STEAM_0:X:Y` o `[U:1:N]`.
 

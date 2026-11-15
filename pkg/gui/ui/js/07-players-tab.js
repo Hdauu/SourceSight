@@ -93,6 +93,7 @@ function openPlayerPage(steamId) {
     activePlayer = steamId;
     renderPlayerList();
     window.getPlayerDetail(steamId).then(d => {
+        lastPlayerDetail = d;
         const el = document.getElementById('playerView');
         if (!d) {
             el.innerHTML = '<div class="muted">Este jugador no aparece en el historial.</div>';
@@ -135,7 +136,7 @@ function openPlayerPage(steamId) {
                 compareRow('Incidentes por demo', a.incidentsPerDemo, g.incidentsPerDemo, '', true) +
             '</tbody></table></div></section>' +
             '<section class="panel"><div class="panel-head"><div class="panel-title">Dónde pega</div><span class="muted">Impactos a enemigos en todas sus demos</span></div><div class="panel-body" id="ppFigure"></div></section>' +
-            '<section class="panel"><div class="panel-head"><div class="panel-title">Demos <span class="count">' + d.demos + '</span></div><span class="muted">Click para abrir la demo</span></div>' +
+            '<section class="panel"><div class="panel-head"><div class="panel-title">Demos <span class="count">' + d.demos + '</span></div><span class="muted">Click para revisarlo demo por demo</span></div>' +
             '<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Demo</th><th>Mapa</th><th class="r">Perfs</th><th class="r">Reacción</th><th class="r">Cabeza</th><th class="r">Snaps</th><th class="r">Wallhack</th><th class="r">Resultado</th></tr></thead><tbody>' +
             d.appearances.map(ap =>
                 '<tr class="click' + (ap.flags && ap.flags.length ? ' mark-red' : '') + '" onclick="openDemoFromPlayer(\'' + ap.entryId + '\')">' +
@@ -157,5 +158,5 @@ function openPlayerPage(steamId) {
 }
 
 function openDemoFromPlayer(entryId) {
-    openHistoryItem(entryId); // the report opens in the Demos section
+    startReview(entryId); // the report opens in the Demos section, on this player (21-review.js)
 }
