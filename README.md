@@ -88,6 +88,8 @@ A 35-minute demo at 128 tick (about 270,000 ticks) takes 4 to 8 seconds.
 
 Measured with 12 real demos on a 12-thread CPU: 62 s one by one, 11 s in parallel. Reports come out identical either way, and a test checks it.
 
+**Hard disks (HDD).** Each demo is read from disk **only once**, in 8 MB blocks, and that same read feeds both the analysis and the file fingerprint (which detects duplicate demos). With many demos at once, small reads make the disk head jump between files all the time. Measured on a laptop HDD with 11 demos at once: 30 MB/s reading 128 KB at a time against 105 MB/s in 8 MB blocks. Re-analyzing 25 demos that weren't in memory went from 62 s to 34 s. On an SSD nothing changes.
+
 ## How the app is organized
 
 On the left, a menu with the sections:

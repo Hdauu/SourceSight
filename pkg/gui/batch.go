@@ -297,11 +297,9 @@ func (a *app) parseOne(b *batch, i int, path string, force bool) (res parsed) {
 			return res
 		}
 	}
-	b.update(i, func(r *batchRow) { r.State = stHashing })
-	res.sha, _ = history.FileSHA256(path)
-
+	// One read of the file for both the hash and the analysis (it matters on hard disks)
 	b.update(i, func(r *batchRow) { r.State = stParsing })
-	res.rep, res.err = parser.ParseDemo(path, parser.ParserOptions{
+	res.rep, res.sha, res.err = parser.ParseDemoHashed(path, parser.ParserOptions{
 		Cancel:      b.cancel,
 		ShiftRadius: b.shiftRadius,
 		OnProgress: func(f float64) {

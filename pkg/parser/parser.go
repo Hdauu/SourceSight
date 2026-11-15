@@ -1,11 +1,12 @@
 package parser
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"math"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -37,13 +38,36 @@ type ParserOptions struct {
 
 func ParseDemo(demoPath string, opts ParserOptions) (*core.DemoReport, error) {
 	opts.DemoPath = demoPath
-	f, err := os.Open(demoPath)
+	f, err := openDemo(demoPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open demo: %w", err)
 	}
 	defer f.Close()
 
 	return ParseDemoReader(f, opts)
+}
+
+// ParseDemoHashed parses a demo and also returns the SHA-256 of the whole file,
+// reading it from disk only once. The hash is "" if the rest of the file after the
+// demo data couldn't be read.
+func ParseDemoHashed(demoPath string, opts ParserOptions) (*core.DemoReport, string, error) {
+	opts.DemoPath = demoPath
+	f, err := openDemo(demoPath)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to open demo: %w", err)
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	rep, err := ParseDemoReader(io.TeeReader(f, h), opts)
+	if err != nil {
+		return nil, "", err
+	}
+	// The parser may stop before the end of the file
+	if _, err := io.Copy(h, f); err != nil {
+		return rep, "", nil
+	}
+	return rep, hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func ParseDemoReader(r io.Reader, opts ParserOptions) (*core.DemoReport, error) {
